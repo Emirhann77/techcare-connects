@@ -24,9 +24,9 @@ npm run dev
 
 Then open http://localhost:3000.
 
-## The demo story (Anira's journey)
+## The demo story (Thomas' journey)
 
-1. **AI First Filter** — Anira asks: _"I need help with Supplier John's Excel macro."_
+1. **AI First Filter** — Thomas asks: _"I need help with Supplier John's Excel macro."_
    The AI "analyzes", then declines: this needs company-specific experience.
    AI is the first filter; people are the second level.
 2. **Scalable Peer Matching** — a frontend function ranks `mockPeers` by experience
