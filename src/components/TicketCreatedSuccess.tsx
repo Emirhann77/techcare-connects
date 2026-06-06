@@ -12,22 +12,21 @@ export default function TicketCreatedSuccess({
   request,
   onGoHome,
 }: TicketCreatedSuccessProps) {
-  const expertFirst = request.expertName.split(" ")[0];
-
   return (
     <section className="mx-auto max-w-lg animate-fade-in text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
         <CheckCircle2 className="h-8 w-8" />
       </div>
-      <p className="uppercase-label mt-6 text-stone-400">Ticket created</p>
+      <p className="uppercase-label mt-6 text-stone-400">Posted to ticket pool</p>
       <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900">
-        We&apos;ve routed your question to{" "}
-        <span className="text-brand-600">{expertFirst}</span>.
+        Your question is in the{" "}
+        <span className="text-brand-600">shared pool</span>.
       </h1>
       <p className="mt-3 text-sm text-stone-500">
-        Your ticket is in the queue. {expertFirst} will be notified — you can open
-        the chat from <span className="font-medium text-stone-700">My requests</span> on
-        the home page once they&apos;re ready.
+        Helpers browse open tickets and pick what they can answer — no one is
+        assigned upfront. You&apos;ll be notified in{" "}
+        <span className="font-medium text-stone-700">My requests</span> when
+        someone claims yours. Helper identity stays hidden until the session ends.
       </p>
 
       <div className="mt-8 rounded-3xl border border-paper-300 bg-white p-5 text-left shadow-sm">
@@ -37,10 +36,10 @@ export default function TicketCreatedSuccess({
         </div>
         <p className="mt-2 font-serif text-xl text-stone-900">{request.title}</p>
         <p className="mt-1 text-sm text-stone-500">
-          Expert: {request.expertName} · {request.expertRole}
+          Status: {request.status} · Urgency: {request.urgency}
         </p>
         <p className="mt-2 text-xs text-stone-400">
-          Urgency: {request.urgency} · Status: {request.status}
+          Visible to helpers as an anonymous asker — your name is not shown.
         </p>
       </div>
 
@@ -52,8 +51,7 @@ export default function TicketCreatedSuccess({
         <ArrowRight className="h-4 w-4" />
       </button>
       <p className="mt-3 text-xs text-stone-400">
-        Find it under &ldquo;My requests&rdquo; — separate from tickets assigned to
-        you for helping others.
+        Helpers see it in the ticket pool on the home page.
       </p>
     </section>
   );

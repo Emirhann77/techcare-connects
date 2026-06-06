@@ -152,13 +152,13 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
           onClick={() => onContinue({ slots, spot, urgency, okayToWait })}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
         >
-          Find matching experts
+          Post to ticket pool
           <ArrowRight className="h-4 w-4" />
         </button>
         <p className="mt-2 text-center text-xs text-stone-400">
           {slots.length > 0
             ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected`
-            : "Tip: pick at least one slot for the best time match"}
+            : "Tip: pick at least one slot so helpers know when you're free"}
         </p>
       </div>
     </div>

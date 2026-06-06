@@ -15,6 +15,12 @@ const urgencyStyles: Record<QuestionUrgency, string> = {
   "Can wait": "bg-stone-100 text-stone-500",
 };
 
+const statusLabel: Record<MyRequest["status"], string> = {
+  "In pool": "Waiting in pool",
+  Claimed: "Helper claimed",
+  Ready: "Ready to chat",
+};
+
 export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +33,7 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
       <div className="mb-3 flex items-center justify-between">
         <p className="uppercase-label flex items-center gap-2 text-brand-700">
           <Send className="h-4 w-4" />
-          My requests · questions you asked
+          My requests · questions you posted
         </p>
         <div className="flex items-center gap-1.5">
           <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-brand-200">
@@ -52,8 +58,8 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
 
       {requests.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-brand-200 bg-white/60 px-4 py-6 text-center text-sm text-stone-500">
-          No open requests yet. Connect with an expert and your ticket will show up
-          here (max {MAX_ACTIVE_TICKETS} at a time).
+          No open requests yet. Post your question to the ticket pool and a helper
+          will pick it up (max {MAX_ACTIVE_TICKETS} at a time).
         </p>
       ) : (
         <div
@@ -75,7 +81,11 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
               </div>
               <p className="font-serif text-base leading-snug text-stone-900">{r.title}</p>
               <p className="text-xs text-stone-500">
-                With {r.expertName.split(" ")[0]} · {r.expertRole}
+                {r.status === "In pool"
+                  ? "In the shared pool · waiting for a helper"
+                  : r.helperLabel
+                    ? `${r.helperLabel} · identity hidden until session ends`
+                    : "A helper is reviewing your ticket"}
               </p>
               <span
                 className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
@@ -84,7 +94,7 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
                     : "bg-amber-100 text-amber-700"
                 }`}
               >
-                {r.status === "Ready" ? "Ready to chat" : "Pending"}
+                {statusLabel[r.status]}
               </span>
               <button
                 onClick={() => r.status === "Ready" && onChat(r)}
@@ -96,7 +106,7 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
                 }`}
               >
                 <MessageSquare className="h-3.5 w-3.5" />
-                {r.status === "Ready" ? "Open chat" : "Waiting for expert"}
+                {r.status === "Ready" ? "Open chat" : "Waiting for helper"}
               </button>
             </div>
           ))}

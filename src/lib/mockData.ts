@@ -90,7 +90,7 @@ export const questionUrgencyOptions: {
 /** Max open tickets per person — asking or helping — so nobody gets overwhelmed. */
 export const MAX_ACTIVE_TICKETS = 3;
 
-/** A help request from a colleague, assigned to Thomas (the experienced one). */
+/** Legacy assigned-ticket shape (seed data for the pool). */
 export interface Ticket {
   id: string;
   fromName: string;
@@ -102,19 +102,51 @@ export interface Ticket {
   postedAgo: string;
 }
 
-/** A request Thomas created by connecting with an expert (the asking side). */
-export interface MyRequest {
+export type PoolTicketStatus = "open" | "claimed" | "ready";
+
+/** A help request sitting in the shared pool — helpers pick what to work on. */
+export interface PoolTicket {
   id: string;
-  peerId: string;
-  expertName: string;
-  expertRole: string;
   title: string;
   detail: string;
   tags: string[];
   urgency: QuestionUrgency;
   spot: string;
-  status: "Pending" | "Ready";
+  /** Real asker name — never shown in the pool UI. */
+  askerName: string;
+  askerRole: string;
+  /** Anonymous label helpers see (e.g. "Asker #2"). */
+  anonymousLabel: string;
+  status: PoolTicketStatus;
+  claimedBy?: string;
+  postedAgo: string;
+  /** Set when Thomas (or another user) posts the ticket. */
+  createdBy?: string;
+}
+
+/** A request Thomas posted to the pool (the asking side). */
+export interface MyRequest {
+  id: string;
+  poolTicketId: string;
+  title: string;
+  detail: string;
+  tags: string[];
+  urgency: QuestionUrgency;
+  spot: string;
+  status: "In pool" | "Claimed" | "Ready";
+  /** Anonymous helper label once someone claims it. */
+  helperLabel?: string;
   createdAgo: string;
+}
+
+export function anonymousAskerLabel(ticketId: string, pool: PoolTicket[]): string {
+  const openOrder = pool.filter((t) => t.status === "open" || t.id === ticketId);
+  const n = openOrder.findIndex((t) => t.id === ticketId) + 1;
+  return n > 0 ? `Asker #${n}` : "Asker";
+}
+
+export function anonymousHelperLabel(index: number): string {
+  return `Helper #${index}`;
 }
 
 /**
@@ -157,6 +189,29 @@ export const mockTickets: Ticket[] = [
     postedAgo: "2h ago",
   },
 ];
+
+function ticketUrgencyToQuestion(u: TicketUrgency): QuestionUrgency {
+  if (u === "High") return "Urgent";
+  if (u === "Low") return "Can wait";
+  return "Normal";
+}
+
+/** Seed tickets converted into the shared pool (asker identity hidden). */
+export function createInitialPoolTickets(): PoolTicket[] {
+  return mockTickets.map((t, i) => ({
+    id: t.id,
+    title: t.title,
+    detail: t.detail,
+    tags: t.tags,
+    urgency: ticketUrgencyToQuestion(t.urgency),
+    spot: "online",
+    askerName: t.fromName,
+    askerRole: t.fromRole,
+    anonymousLabel: `Asker #${i + 1}`,
+    status: "open" as const,
+    postedAgo: t.postedAgo,
+  }));
+}
 
 /**
  * The internal expert pool. These are colleagues with company-specific,

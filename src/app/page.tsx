@@ -1,30 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import GamificationHeader from "@/components/GamificationHeader";
 import AiFilter, { type ProceedContext } from "@/components/AiFilter";
 import AvailabilityStep, { type AvailabilityChoice } from "@/components/AvailabilityStep";
-import PeerCard from "@/components/PeerCard";
 import ChatModal from "@/components/ChatModal";
 import CelebrationModal from "@/components/CelebrationModal";
-import TicketStrip from "@/components/TicketStrip";
+import TicketPoolStrip from "@/components/TicketPoolStrip";
+import MyHelpingStrip from "@/components/MyHelpingStrip";
 import MyRequestsStrip from "@/components/MyRequestsStrip";
-import TicketDetail from "@/components/TicketDetail";
+import PoolTicketDetail from "@/components/PoolTicketDetail";
 import TicketCreatedSuccess from "@/components/TicketCreatedSuccess";
 import {
+  anonymousHelperLabel,
+  createInitialPoolTickets,
   currentUser,
   gamificationRules,
   MAX_ACTIVE_TICKETS,
-  mockPeers,
-  mockTickets,
   type MyRequest,
   type Peer,
-  type Ticket,
+  type PoolTicket,
 } from "@/lib/mockData";
-import { matchPeers } from "@/lib/matching";
 
-type Stage = "filter" | "availability" | "matches" | "ticket-created" | "ticket";
+type Stage = "filter" | "availability" | "ticket-created" | "pool-ticket";
 type Mode = "learning" | "teaching";
 
 interface Session {
@@ -33,12 +32,13 @@ interface Session {
   problem: string;
   spot: string;
   myRequestId?: string;
+  poolTicketId?: string;
 }
 
-const ticketToPeer = (t: Ticket): Peer => ({
+const poolTicketToPeer = (t: PoolTicket): Peer => ({
   id: t.id,
-  name: t.fromName,
-  role: t.fromRole,
+  name: t.anonymousLabel,
+  role: t.askerRole,
   experienceTags: t.tags,
   availabilityStatus: "Available",
   gamificationPoints: 0,
@@ -46,20 +46,16 @@ const ticketToPeer = (t: Ticket): Peer => ({
   availableSlots: [],
 });
 
-const requestToPeer = (r: MyRequest): Peer => {
-  const found = mockPeers.find((p) => p.id === r.peerId);
-  if (found) return found;
-  return {
-    id: r.peerId,
-    name: r.expertName,
-    role: r.expertRole,
-    experienceTags: r.tags,
-    availabilityStatus: "Available",
-    gamificationPoints: 0,
-    blurb: r.detail,
-    availableSlots: [],
-  };
-};
+const helperPeerForLearning = (helperLabel: string, tags: string[]): Peer => ({
+  id: "helper-anon",
+  name: helperLabel,
+  role: "Matched helper",
+  experienceTags: tags,
+  availabilityStatus: "Available",
+  gamificationPoints: 0,
+  blurb: "Claimed your ticket from the pool.",
+  availableSlots: [],
+});
 
 function titleFromProblem(text: string): string {
   const trimmed = text.trim();
@@ -72,8 +68,8 @@ export default function Home() {
   const [problem, setProblem] = useState(currentUser.currentProblem);
   const [matchTags, setMatchTags] = useState<string[]>([]);
   const [focusTopic, setFocusTopic] = useState<string | undefined>(undefined);
-  const [availability, setAvailability] = useState<AvailabilityChoice | null>(null);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [poolTickets, setPoolTickets] = useState<PoolTicket[]>(createInitialPoolTickets);
+  const [selectedPoolTicket, setSelectedPoolTicket] = useState<PoolTicket | null>(null);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
   const [justCreated, setJustCreated] = useState<MyRequest | null>(null);
   const [points, setPoints] = useState(currentUser.gamificationPoints);
@@ -84,14 +80,25 @@ export default function Home() {
 
   const atRequestLimit = myRequests.length >= MAX_ACTIVE_TICKETS;
 
-  const matches = useMemo(
+  const openPoolTickets = useMemo(
     () =>
-      matchPeers(matchTags, mockPeers, {
-        selectedSlots: availability?.slots,
-        okayToWait: availability?.okayToWait,
-      }),
-    [matchTags, availability]
+      poolTickets.filter(
+        (t) => t.status === "open" && t.createdBy !== currentUser.id
+      ),
+    [poolTickets]
   );
+
+  const myActiveHelps = useMemo(
+    () =>
+      poolTickets.filter(
+        (t) =>
+          t.claimedBy === currentUser.id &&
+          (t.status === "claimed" || t.status === "ready")
+      ),
+    [poolTickets]
+  );
+
+  const atHelperCapacity = myActiveHelps.length >= MAX_ACTIVE_TICKETS;
 
   const handleProceed = (ctx: ProceedContext) => {
     setProblem(ctx.problem);
@@ -100,54 +107,131 @@ export default function Home() {
     setStage("availability");
   };
 
-  const handleAvailability = (choice: AvailabilityChoice) => {
-    setAvailability(choice);
-    setStage("matches");
-  };
-
-  const handleCreateRequest = (peer: Peer) => {
+  const handlePostToPool = (choice: AvailabilityChoice) => {
     if (atRequestLimit) return;
 
-    const id = `my-${Date.now()}`;
-    const request: MyRequest = {
-      id,
-      peerId: peer.id,
-      expertName: peer.name,
-      expertRole: peer.role,
+    const poolId = `pool-${Date.now()}`;
+    const reqId = `my-${Date.now()}`;
+    const askerNumber =
+      poolTickets.filter((t) => t.createdBy !== currentUser.id).length +
+      myRequests.length +
+      1;
+
+    const poolTicket: PoolTicket = {
+      id: poolId,
       title: titleFromProblem(problem),
       detail: problem,
-      tags: peer.experienceTags.filter((t) =>
-        matchTags.some((m) => m.toLowerCase() === t.toLowerCase())
-      ),
-      urgency: availability?.urgency ?? "Normal",
-      spot: availability?.spot ?? "online",
-      status: "Pending",
+      tags: matchTags,
+      urgency: choice.urgency,
+      spot: choice.spot,
+      askerName: currentUser.name,
+      askerRole: currentUser.role,
+      anonymousLabel: `Asker #${askerNumber}`,
+      status: "open",
+      postedAgo: "Just now",
+      createdBy: currentUser.id,
+    };
+
+    const request: MyRequest = {
+      id: reqId,
+      poolTicketId: poolId,
+      title: poolTicket.title,
+      detail: problem,
+      tags: matchTags,
+      urgency: choice.urgency,
+      spot: choice.spot,
+      status: "In pool",
       createdAgo: "Just now",
     };
 
+    setPoolTickets((prev) => [...prev, poolTicket]);
     setMyRequests((prev) => [...prev, request]);
     setJustCreated(request);
     setStage("ticket-created");
 
-    // Simulate the expert accepting — chat unlocks from My requests.
+    // Simulate a helper claiming from the pool (demo has no second user).
+    const helperLabel = anonymousHelperLabel(1);
     setTimeout(() => {
+      setPoolTickets((prev) =>
+        prev.map((t) =>
+          t.id === poolId
+            ? { ...t, status: "claimed", claimedBy: "helper-sim" }
+            : t
+        )
+      );
       setMyRequests((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: "Ready" as const } : r))
+        prev.map((r) =>
+          r.poolTicketId === poolId
+            ? { ...r, status: "Claimed", helperLabel }
+            : r
+        )
       );
       setJustCreated((prev) =>
-        prev?.id === id ? { ...prev, status: "Ready" } : prev
+        prev?.poolTicketId === poolId
+          ? { ...prev, status: "Claimed", helperLabel }
+          : prev
       );
-    }, 2000);
+
+      setTimeout(() => {
+        setPoolTickets((prev) =>
+          prev.map((t) =>
+            t.id === poolId ? { ...t, status: "ready" } : t
+          )
+        );
+        setMyRequests((prev) =>
+          prev.map((r) =>
+            r.poolTicketId === poolId ? { ...r, status: "Ready" } : r
+          )
+        );
+        setJustCreated((prev) =>
+          prev?.poolTicketId === poolId ? { ...prev, status: "Ready" } : prev
+        );
+      }, 1500);
+    }, 2500);
+  };
+
+  const handleClaimPoolTicket = (ticket: PoolTicket) => {
+    if (atHelperCapacity) return;
+
+    setPoolTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticket.id
+          ? { ...t, status: "claimed", claimedBy: currentUser.id }
+          : t
+      )
+    );
+    setSelectedPoolTicket(null);
+    setStage("filter");
+
+    setTimeout(() => {
+      setPoolTickets((prev) =>
+        prev.map((t) =>
+          t.id === ticket.id ? { ...t, status: "ready" } : t
+        )
+      );
+    }, 1500);
   };
 
   const handleOpenMyRequestChat = (request: MyRequest) => {
-    if (request.status !== "Ready") return;
+    if (request.status !== "Ready" || !request.helperLabel) return;
     setSession({
-      peer: requestToPeer(request),
+      peer: helperPeerForLearning(request.helperLabel, request.tags),
       mode: "learning",
       problem: request.detail,
       spot: request.spot,
       myRequestId: request.id,
+      poolTicketId: request.poolTicketId,
+    });
+  };
+
+  const handleOpenHelpingChat = (ticket: PoolTicket) => {
+    if (ticket.status !== "ready") return;
+    setSession({
+      peer: poolTicketToPeer(ticket),
+      mode: "teaching",
+      problem: ticket.detail,
+      spot: ticket.spot,
+      poolTicketId: ticket.id,
     });
   };
 
@@ -162,9 +246,15 @@ export default function Home() {
     setCelebrate({ peer, mode });
     setSession(null);
 
-    // Remove resolved learning request from open list (frees a slot).
+    if (session?.poolTicketId) {
+      setPoolTickets((prev) =>
+        prev.filter((t) => t.id !== session.poolTicketId)
+      );
+    }
     if (mode === "learning" && session?.myRequestId) {
-      setMyRequests((prev) => prev.filter((r) => r.id !== session.myRequestId));
+      setMyRequests((prev) =>
+        prev.filter((r) => r.id !== session.myRequestId)
+      );
     }
   };
 
@@ -173,8 +263,8 @@ export default function Home() {
     setProblem(currentUser.currentProblem);
     setMatchTags([]);
     setFocusTopic(undefined);
-    setAvailability(null);
-    setSelectedTicket(null);
+    setPoolTickets(createInitialPoolTickets());
+    setSelectedPoolTicket(null);
     setMyRequests([]);
     setJustCreated(null);
     setPoints(currentUser.gamificationPoints);
@@ -196,12 +286,17 @@ export default function Home() {
       <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
         {stage === "filter" && (
           <section className="space-y-4">
-            <TicketStrip
-              tickets={mockTickets.slice(0, MAX_ACTIVE_TICKETS)}
+            <TicketPoolStrip
+              tickets={openPoolTickets}
               onSelect={(t) => {
-                setSelectedTicket(t);
-                setStage("ticket");
+                setSelectedPoolTicket(t);
+                setStage("pool-ticket");
               }}
+            />
+
+            <MyHelpingStrip
+              tickets={myActiveHelps}
+              onChat={handleOpenHelpingChat}
             />
 
             <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
@@ -213,8 +308,9 @@ export default function Home() {
                 <span className="text-brand-600">{currentUser.name}?</span>
               </h1>
               <p className="mt-3 max-w-xl text-stone-500">
-                Start with the AI. If it can&apos;t actually help, we&apos;ll route you to
-                a human who&apos;s been there.
+                Start with the AI. If it can&apos;t actually help, post your question
+                to the ticket pool — helpers pick what they can answer. No names shown
+                until the session ends.
               </p>
               <div className="mt-8">
                 <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
@@ -233,21 +329,15 @@ export default function Home() {
           />
         )}
 
-        {stage === "ticket" && selectedTicket && (
-          <TicketDetail
-            ticket={selectedTicket}
+        {stage === "pool-ticket" && selectedPoolTicket && (
+          <PoolTicketDetail
+            ticket={selectedPoolTicket}
             onBack={() => {
-              setSelectedTicket(null);
+              setSelectedPoolTicket(null);
               setStage("filter");
             }}
-            onHelp={(t) =>
-              setSession({
-                peer: ticketToPeer(t),
-                mode: "teaching",
-                problem: t.detail,
-                spot: "online",
-              })
-            }
+            onClaim={handleClaimPoolTicket}
+            atCapacity={atHelperCapacity}
           />
         )}
 
@@ -260,115 +350,40 @@ export default function Home() {
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
-            <p className="uppercase-label text-stone-400">Stage 02 · Your Availability</p>
+            <p className="uppercase-label text-stone-400">Stage 02 · Post to pool</p>
             <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
               When works for <span className="text-brand-600">you?</span>
             </h1>
             <p className="mt-3 max-w-xl text-stone-500">
               {focusTopic ? (
                 <>
-                  Focused topic: <span className="font-medium text-stone-700">{focusTopic}</span>.
-                  Pick when you&apos;re free — we&apos;ll only show experts whose calendar
-                  overlaps yours.
+                  Focused topic:{" "}
+                  <span className="font-medium text-stone-700">{focusTopic}</span>.
+                  Set your availability — your ticket goes to the shared pool for
+                  helpers to claim.
                 </>
               ) : (
                 <>
-                  Pick the windows you&apos;re free. We&apos;ll only show experts whose
-                  calendar overlaps yours — so no one&apos;s time gets wasted.
+                  Set your availability and urgency. Your question joins the ticket
+                  pool — helpers browse and pick what matches their skills. Nobody
+                  picks people upfront.
                 </>
               )}
             </p>
-            <div className="mt-8">
-              <AvailabilityStep key={resetKey} onContinue={handleAvailability} />
-            </div>
-          </section>
-        )}
-
-        {stage === "matches" && (
-          <section className="animate-fade-in">
-            <button
-              onClick={() => setStage("availability")}
-              className="uppercase-label mb-4 inline-flex items-center gap-1.5 text-stone-400 transition hover:text-stone-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-            <p className="uppercase-label text-stone-400">Stage 03 · Peer Matches</p>
-            <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
-              Top <span className="text-brand-600">{matches.length}</span> people
-              <br className="hidden sm:block" /> who can actually help.
-            </h1>
-            <p className="mt-3 max-w-xl text-stone-500">
-              {matches.length > 0 ? (
-                <>Showing the best matches first so the right people aren&apos;t overwhelmed. </>
-              ) : (
-                <>
-                  No one matches your times right now. Go back and tick &ldquo;I&apos;m okay
-                  to wait&rdquo; to include busy experts.{" "}
-                </>
-              )}
-              {availability && !availability.okayToWait
-                ? "Only people available right now."
-                : availability?.okayToWait
-                  ? "Including busy experts you'll wait for."
-                  : ""}
-            </p>
-            {availability && (
-              <p className="mt-2 text-sm text-stone-500">
-                Urgency:{" "}
-                <span
-                  className={`font-semibold ${
-                    availability.urgency === "Urgent"
-                      ? "text-red-600"
-                      : availability.urgency === "Can wait"
-                        ? "text-stone-500"
-                        : "text-brand-600"
-                  }`}
-                >
-                  {availability.urgency}
-                </span>
-                {availability.urgency === "Urgent" &&
-                  " — we'll prioritise experts who are free soon."}
-              </p>
-            )}
 
             {atRequestLimit && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 You already have {MAX_ACTIVE_TICKETS} open requests. Resolve one from{" "}
-                <span className="font-semibold">My requests</span> on the home page before
-                creating another — we cap it so experts aren&apos;t overwhelmed.
+                <span className="font-semibold">My requests</span> before posting
+                another.
               </div>
             )}
 
-            {matches.length > 0 && (
-              <div className="mt-6 rounded-3xl border border-brand-200 bg-white p-5">
-                <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
-                  <Sparkles className="h-4 w-4" />
-                  #1 Match
-                </p>
-                <p className="mt-1 font-serif text-2xl text-stone-900">
-                  <span className="text-brand-600">{matches[0].peer.name.split(" ")[0]}</span>{" "}
-                  knows {matches[0].matchedTags[0]}.{" "}
-                  <span className="text-stone-400">Create a ticket to connect.</span>
-                </p>
-              </div>
-            )}
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {matches.map(({ peer, matchedTags, matchedSlots }, i) => (
-                <PeerCard
-                  key={peer.id}
-                  peer={peer}
-                  matchedTags={matchedTags}
-                  matchedSlots={matchedSlots}
-                  highlight={i === 0}
-                  connectDisabled={atRequestLimit}
-                  connectLabel={
-                    atRequestLimit ? "Limit reached (3/3)" : "Create ticket"
-                  }
-                  onConnect={handleCreateRequest}
-                />
-              ))}
+            <div className="mt-8">
+              <AvailabilityStep
+                key={resetKey}
+                onContinue={atRequestLimit ? () => {} : handlePostToPool}
+              />
             </div>
           </section>
         )}
