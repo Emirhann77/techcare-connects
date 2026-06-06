@@ -285,7 +285,24 @@ export default function Home() {
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
         {stage === "filter" && (
-          <section className="space-y-4">
+          <section className="space-y-5">
+            <div>
+              <p className="uppercase-label text-stone-400">Stage 01 · AI First Filter</p>
+              <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
+                What are you stuck on,{" "}
+                <span className="text-brand-600">{currentUser.name}?</span>
+              </h1>
+              <p className="mt-3 max-w-xl text-stone-500">
+                Start with the AI. If it can&apos;t actually help, we&apos;ll route you to
+                a human who&apos;s been there.
+              </p>
+              <div className="mt-6">
+                <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
+              </div>
+            </div>
+
+            <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
+
             <TicketPoolStrip
               tickets={openPoolTickets}
               onSelect={(t) => {
@@ -299,23 +316,12 @@ export default function Home() {
               onChat={handleOpenHelpingChat}
             />
 
-            <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
-
-            <div className="mt-4">
-              <p className="uppercase-label text-stone-400">Stage 01 · AI First Filter</p>
-              <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
-                What are you stuck on,{" "}
-                <span className="text-brand-600">{currentUser.name}?</span>
-              </h1>
-              <p className="mt-3 max-w-xl text-stone-500">
-                Start with the AI. If it can&apos;t actually help, post your question
-                to the ticket pool — helpers pick what they can answer. No names shown
-                until the session ends.
+            {atHelperCapacity && (
+              <p className="text-center text-xs text-amber-600">
+                You&apos;re at your helping limit ({MAX_ACTIVE_TICKETS}). New pool tickets
+                are visible but paused until a slot opens.
               </p>
-              <div className="mt-8">
-                <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
-              </div>
-            </div>
+            )}
           </section>
         )}
 
