@@ -34,7 +34,7 @@ export default function OnboardingScreen({ onContinue }: OnboardingScreenProps) 
         </h1>
         <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-accent-pink/30 bg-white px-5 py-4 shadow-sm">
           <p className="font-serif text-lg text-stone-800">
-            Stuck on SQL but tired of generic AI answers?
+            You need help but are bored of AI generated answer.
           </p>
         </div>
       </div>
