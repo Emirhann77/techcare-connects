@@ -2,7 +2,12 @@
 
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight, MessageSquare, Send } from "lucide-react";
-import { MAX_ACTIVE_TICKETS, type MyRequest, type QuestionUrgency } from "@/lib/mockData";
+import {
+  displayHelperName,
+  MAX_ACTIVE_TICKETS,
+  type MyRequest,
+  type QuestionUrgency,
+} from "@/lib/mockData";
 
 interface MyRequestsStripProps {
   requests: MyRequest[];
@@ -83,8 +88,8 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
               <p className="text-xs text-stone-500">
                 {r.status === "In pool"
                   ? "In the shared pool · waiting for a helper"
-                  : r.helperLabel
-                    ? `${r.helperLabel} · identity hidden until session ends`
+                  : displayHelperName(r)
+                    ? `Helper: ${displayHelperName(r)}${r.helperRole ? ` · ${r.helperRole}` : ""}`
                     : "A helper is reviewing your ticket"}
               </p>
               <span

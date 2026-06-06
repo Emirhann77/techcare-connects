@@ -119,6 +119,9 @@ export interface PoolTicket {
   anonymousLabel: string;
   status: PoolTicketStatus;
   claimedBy?: string;
+  /** Revealed to both parties once the ticket is claimed. */
+  helperName?: string;
+  helperRole?: string;
   postedAgo: string;
   /** Set when Thomas (or another user) posts the ticket. */
   createdBy?: string;
@@ -134,8 +137,9 @@ export interface MyRequest {
   urgency: QuestionUrgency;
   spot: string;
   status: "In pool" | "Claimed" | "Ready";
-  /** Anonymous helper label once someone claims it. */
-  helperLabel?: string;
+  /** Real helper name — revealed once someone claims the ticket. */
+  helperName?: string;
+  helperRole?: string;
   createdAgo: string;
 }
 
@@ -147,6 +151,26 @@ export function anonymousAskerLabel(ticketId: string, pool: PoolTicket[]): strin
 
 export function anonymousHelperLabel(index: number): string {
   return `Helper #${index}`;
+}
+
+/** Mock colleague who claims Thomas's ticket in the single-user demo. */
+export const simulatedPoolHelper = {
+  id: "helper-sim",
+  name: "Almira Voss",
+  role: "Senior Loan Officer",
+};
+
+/** Asker label in pool UI — anonymous until claimed. */
+export function displayAskerName(ticket: PoolTicket): string {
+  return ticket.status === "open" ? ticket.anonymousLabel : ticket.askerName;
+}
+
+/** Helper label for the asker — hidden until claimed. */
+export function displayHelperName(
+  request: Pick<MyRequest, "status" | "helperName" | "helperRole">
+): string | null {
+  if (request.status === "In pool" || !request.helperName) return null;
+  return request.helperName;
 }
 
 /**

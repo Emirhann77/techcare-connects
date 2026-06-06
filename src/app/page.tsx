@@ -13,11 +13,11 @@ import MyRequestsStrip from "@/components/MyRequestsStrip";
 import PoolTicketDetail from "@/components/PoolTicketDetail";
 import TicketCreatedSuccess from "@/components/TicketCreatedSuccess";
 import {
-  anonymousHelperLabel,
   createInitialPoolTickets,
   currentUser,
   gamificationRules,
   MAX_ACTIVE_TICKETS,
+  simulatedPoolHelper,
   type MyRequest,
   type Peer,
   type PoolTicket,
@@ -37,7 +37,7 @@ interface Session {
 
 const poolTicketToPeer = (t: PoolTicket): Peer => ({
   id: t.id,
-  name: t.anonymousLabel,
+  name: t.status === "open" ? t.anonymousLabel : t.askerName,
   role: t.askerRole,
   experienceTags: t.tags,
   availabilityStatus: "Available",
@@ -46,10 +46,14 @@ const poolTicketToPeer = (t: PoolTicket): Peer => ({
   availableSlots: [],
 });
 
-const helperPeerForLearning = (helperLabel: string, tags: string[]): Peer => ({
+const helperPeerForLearning = (
+  helperName: string,
+  helperRole: string,
+  tags: string[]
+): Peer => ({
   id: "helper-anon",
-  name: helperLabel,
-  role: "Matched helper",
+  name: helperName,
+  role: helperRole,
   experienceTags: tags,
   availabilityStatus: "Available",
   gamificationPoints: 0,
@@ -150,25 +154,40 @@ export default function Home() {
     setStage("ticket-created");
 
     // Simulate a helper claiming from the pool (demo has no second user).
-    const helperLabel = anonymousHelperLabel(1);
     setTimeout(() => {
       setPoolTickets((prev) =>
         prev.map((t) =>
           t.id === poolId
-            ? { ...t, status: "claimed", claimedBy: "helper-sim" }
+            ? {
+                ...t,
+                status: "claimed",
+                claimedBy: simulatedPoolHelper.id,
+                helperName: simulatedPoolHelper.name,
+                helperRole: simulatedPoolHelper.role,
+              }
             : t
         )
       );
       setMyRequests((prev) =>
         prev.map((r) =>
           r.poolTicketId === poolId
-            ? { ...r, status: "Claimed", helperLabel }
+            ? {
+                ...r,
+                status: "Claimed",
+                helperName: simulatedPoolHelper.name,
+                helperRole: simulatedPoolHelper.role,
+              }
             : r
         )
       );
       setJustCreated((prev) =>
         prev?.poolTicketId === poolId
-          ? { ...prev, status: "Claimed", helperLabel }
+          ? {
+              ...prev,
+              status: "Claimed",
+              helperName: simulatedPoolHelper.name,
+              helperRole: simulatedPoolHelper.role,
+            }
           : prev
       );
 
@@ -196,7 +215,13 @@ export default function Home() {
     setPoolTickets((prev) =>
       prev.map((t) =>
         t.id === ticket.id
-          ? { ...t, status: "claimed", claimedBy: currentUser.id }
+          ? {
+              ...t,
+              status: "claimed",
+              claimedBy: currentUser.id,
+              helperName: currentUser.name,
+              helperRole: currentUser.role,
+            }
           : t
       )
     );
@@ -213,9 +238,13 @@ export default function Home() {
   };
 
   const handleOpenMyRequestChat = (request: MyRequest) => {
-    if (request.status !== "Ready" || !request.helperLabel) return;
+    if (request.status !== "Ready" || !request.helperName) return;
     setSession({
-      peer: helperPeerForLearning(request.helperLabel, request.tags),
+      peer: helperPeerForLearning(
+        request.helperName,
+        request.helperRole ?? "Matched helper",
+        request.tags
+      ),
       mode: "learning",
       problem: request.detail,
       spot: request.spot,

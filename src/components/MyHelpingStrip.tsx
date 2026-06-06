@@ -2,7 +2,12 @@
 
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight, HeartHandshake, MessageSquare } from "lucide-react";
-import { MAX_ACTIVE_TICKETS, type PoolTicket, type QuestionUrgency } from "@/lib/mockData";
+import {
+  displayAskerName,
+  MAX_ACTIVE_TICKETS,
+  type PoolTicket,
+  type QuestionUrgency,
+} from "@/lib/mockData";
 
 interface MyHelpingStripProps {
   tickets: PoolTicket[];
@@ -71,7 +76,8 @@ export default function MyHelpingStrip({ tickets, onChat }: MyHelpingStripProps)
             </div>
             <p className="font-serif text-base leading-snug text-stone-900">{t.title}</p>
             <p className="text-xs text-stone-500">
-              Helping {t.anonymousLabel} · identity hidden
+              Helping {displayAskerName(t)}
+              {t.status === "open" ? " · identity hidden" : ` · ${t.askerRole}`}
             </p>
             <span
               className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
