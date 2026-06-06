@@ -40,6 +40,7 @@ interface Session {
 const ticketToPeer = (t: Ticket): Peer => ({
   id: t.id,
   name: t.fromName,
+  realName: t.fromRealName,
   role: t.fromRole,
   experienceTags: t.tags,
   availabilityStatus: "Available",
@@ -54,6 +55,7 @@ const requestToPeer = (r: MyRequest): Peer => {
   return {
     id: r.peerId,
     name: r.expertName,
+    realName: r.expertName,
     role: r.expertRole,
     experienceTags: r.tags,
     availabilityStatus: "Available",

@@ -2,7 +2,10 @@ export type AvailabilityStatus = "Available" | "Busy" | "Away";
 
 export interface Peer {
   id: string;
+  /** Anonymous label shown before and during the session. */
   name: string;
+  /** Real identity — revealed only after the session completes. */
+  realName: string;
   role: string;
   experienceTags: string[];
   availabilityStatus: AvailabilityStatus;
@@ -94,6 +97,7 @@ export const MAX_ACTIVE_TICKETS = 3;
 export interface Ticket {
   id: string;
   fromName: string;
+  fromRealName: string;
   fromRole: string;
   title: string;
   detail: string;
@@ -138,10 +142,16 @@ export function expertInitials(peer: Peer): string {
   return `E${n}`;
 }
 
+/** Full name shown after a learning or teaching session ends. */
+export function revealedPeerName(peer: Peer): string {
+  return peer.realName || peer.name;
+}
+
 export const mockTickets: Ticket[] = [
   {
     id: "t-1",
     fromName: "Colleague #1",
+    fromRealName: "Jonas Weber",
     fromRole: "New Teller (2 weeks in)",
     title: "Which figure is the real cash position?",
     detail:
@@ -153,6 +163,7 @@ export const mockTickets: Ticket[] = [
   {
     id: "t-2",
     fromName: "Colleague #2",
+    fromRealName: "Mei Lin",
     fromRole: "Junior Loan Officer",
     title: "My first mortgage approval",
     detail:
@@ -164,6 +175,7 @@ export const mockTickets: Ticket[] = [
   {
     id: "t-3",
     fromName: "Colleague #3",
+    fromRealName: "Carlos Mendes",
     fromRole: "Customer Advisor",
     title: "Old account won't migrate",
     detail:
@@ -182,6 +194,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-almira",
     name: "Internal expert #1",
+    realName: "Almira Voss",
     role: "Senior Loan Officer",
     experienceTags: ["FinFlow", "Loan Approval", "Core Banking"],
     availabilityStatus: "Available",
@@ -192,6 +205,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-tomas",
     name: "Internal expert #2",
+    realName: "Tomas Berg",
     role: "Legacy Systems Engineer",
     experienceTags: ["Legacy Core Banking", "FinFlow", "Internal Tools"],
     availabilityStatus: "Available",
@@ -202,6 +216,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-priya",
     name: "Internal expert #3",
+    realName: "Priya Nair",
     role: "Compliance Manager",
     experienceTags: ["Compliance Reporting", "FinFlow", "Regulations"],
     availabilityStatus: "Busy",
@@ -212,6 +227,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-dmitri",
     name: "Internal expert #4",
+    realName: "Dmitri Sokolov",
     role: "Digital Banking Specialist",
     experienceTags: ["FinFlow", "Reporting", "Automation"],
     availabilityStatus: "Available",
@@ -222,6 +238,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-lena",
     name: "Internal expert #5",
+    realName: "Lena Fischer",
     role: "Branch Operations Veteran (retiring Q4)",
     experienceTags: ["FinFlow", "Legacy Core Banking", "Tribal Knowledge"],
     availabilityStatus: "Away",
@@ -232,6 +249,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-marco",
     name: "Internal expert #6",
+    realName: "Marco Ruiz",
     role: "Systems Integration Engineer",
     experienceTags: ["Core Banking", "FinFlow", "APIs"],
     availabilityStatus: "Available",
@@ -242,6 +260,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-sara",
     name: "Internal expert #7",
+    realName: "Sara Lindqvist",
     role: "Onboarding Buddy",
     experienceTags: ["Onboarding", "Internal Tools", "Mentoring"],
     availabilityStatus: "Available",
@@ -252,6 +271,7 @@ export const mockPeers: Peer[] = [
   {
     id: "p-kwame",
     name: "Internal expert #8",
+    realName: "Kwame Mensah",
     role: "Business Analyst",
     experienceTags: ["Reporting", "Dashboards", "FinFlow"],
     availabilityStatus: "Busy",

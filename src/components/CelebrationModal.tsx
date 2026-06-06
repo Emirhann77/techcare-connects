@@ -1,7 +1,7 @@
 "use client";
 
-import { GraduationCap, PartyPopper, Sparkles, Target } from "lucide-react";
-import { gamificationRules, type Peer } from "@/lib/mockData";
+import { GraduationCap, PartyPopper, Sparkles, Target, UserCheck } from "lucide-react";
+import { gamificationRules, revealedPeerName, type Peer } from "@/lib/mockData";
 
 interface CelebrationModalProps {
   peer: Peer;
@@ -16,12 +16,12 @@ export default function CelebrationModal({
   mode = "learning",
   onClose,
 }: CelebrationModalProps) {
-  const peerLabel = peer.name;
+  const peerRealName = revealedPeerName(peer);
   const teacher = mode === "teaching"
     ? { name: userName, points: gamificationRules.HELPER_POINTS }
-    : { name: peerLabel, points: gamificationRules.HELPER_POINTS };
+    : { name: peerRealName, points: gamificationRules.HELPER_POINTS };
   const learner = mode === "teaching"
-    ? { name: peerLabel, points: gamificationRules.LEARNER_POINTS }
+    ? { name: peerRealName, points: gamificationRules.LEARNER_POINTS }
     : { name: userName, points: gamificationRules.LEARNER_POINTS };
 
   return (
@@ -35,6 +35,15 @@ export default function CelebrationModal({
           Session Complete!
         </h2>
         <p className="mt-1 text-sm text-stone-500">Knowledge stays in the bank.</p>
+
+        <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-left ring-1 ring-brand-200">
+          <UserCheck className="h-4 w-4 shrink-0 text-brand-600" />
+          <p className="text-xs text-brand-800">
+            <span className="font-semibold">Identity revealed:</span> you worked with{" "}
+            <span className="font-semibold">{peerRealName}</span>
+            {mode === "learning" ? " (your expert)" : " (your colleague)"}.
+          </p>
+        </div>
 
         <div className="mt-5 space-y-3 text-left">
           <div className="flex items-center justify-between rounded-2xl bg-white p-3 ring-1 ring-paper-300">
