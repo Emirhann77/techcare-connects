@@ -95,8 +95,8 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
             setSelectedExample(null);
           }}
           disabled={phase === "analyzing"}
-          rows={3}
-          className="mt-4 w-full resize-none bg-transparent font-serif text-2xl leading-snug text-stone-900 outline-none placeholder:text-stone-300 disabled:opacity-60"
+          rows={4}
+          className="mt-4 min-h-[7rem] w-full resize-y overflow-y-auto bg-transparent font-serif text-xl leading-snug text-stone-900 outline-none placeholder:text-stone-300 disabled:opacity-60 sm:text-2xl"
           placeholder="What do you need help with?"
         />
 
