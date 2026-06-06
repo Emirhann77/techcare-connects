@@ -144,7 +144,14 @@ export function expertInitials(peer: Peer): string {
 
 /** Full name shown after a learning or teaching session ends. */
 export function revealedPeerName(peer: Peer): string {
-  return peer.realName || peer.name;
+  const poolPeer = mockPeers.find((p) => p.id === peer.id);
+  if (poolPeer?.realName) return poolPeer.realName;
+
+  const ticket = mockTickets.find((t) => t.id === peer.id);
+  if (ticket?.fromRealName) return ticket.fromRealName;
+
+  if (peer.realName) return peer.realName;
+  return peer.name;
 }
 
 export const mockTickets: Ticket[] = [

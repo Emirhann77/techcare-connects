@@ -21,6 +21,7 @@ import {
   MAX_ACTIVE_TICKETS,
   mockPeers,
   mockTickets,
+  revealedPeerName,
   type MyRequest,
   type Peer,
   type Ticket,
@@ -150,7 +151,10 @@ export default function Home() {
         : gamificationRules.LEARNER_POINTS;
     setPoints((p) => p + earned);
     setRecentlyEarned(earned);
-    setCelebrate({ peer, mode });
+    setCelebrate({
+      peer: { ...peer, realName: revealedPeerName(peer) },
+      mode,
+    });
     setSession(null);
 
     if (mode === "learning" && session?.myRequestId) {
