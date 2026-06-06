@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, MapPin } from "lucide-react";
+import BackButton from "./BackButton";
 import {
   displayAskerName,
   meetingSpots,
@@ -30,13 +31,7 @@ export default function HelperProposalStep({
 
   return (
     <section className="animate-fade-in">
-      <button
-        onClick={onBack}
-        className="uppercase-label mb-4 inline-flex items-center gap-1.5 text-stone-400 transition hover:text-stone-700"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </button>
+      <BackButton onClick={onBack} />
 
       <p className="uppercase-label text-stone-400">Propose a meeting</p>
       <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">

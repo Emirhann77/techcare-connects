@@ -24,7 +24,6 @@ export type QueryAnalysis =
       tags: string[];
       summaryTopic: string;
       subtopics: string[];
-      /** Alternative focused topics the user can switch to. */
       topicOptions: { summaryTopic: string; subtopics: string[] }[];
       resources: Resource[];
     }
@@ -37,11 +36,6 @@ export type QueryAnalysis =
       resources: Resource[];
     };
 
-/**
- * Questions the system has "seen" many times before. If a new question looks
- * like one of these, the AI can publish an anonymized past answer instead of
- * pinging a human again.
- */
 const faqEntries: Array<{
   id: string;
   keywords: string[];
@@ -50,34 +44,33 @@ const faqEntries: Array<{
   pastConversation: PastMessage[];
 }> = [
   {
-    id: "access",
-    keywords: ["password", "log in", "login", "locked out", "access", "sign in"],
-    title: "Getting back into FinFlow",
-    askCount: 23,
+    id: "null",
+    keywords: ["null", "is null", "coalesce", "missing values"],
+    title: "Handling NULL values in SQL",
+    askCount: 19,
     pastConversation: [
-      { from: "asker", text: "I'm locked out of FinFlow right before a client meeting." },
+      { from: "asker", text: "My counts are wrong — NULL rows seem to disappear." },
       {
         from: "expert",
-        text: "Our SSO resets don't go through the vendor portal — use the internal IT self-service tile, not finflow.com. Caught me out too the first time.",
+        text: "Use COALESCE or filter IS NULL explicitly. COUNT(column) ignores NULLs but COUNT(*) does not — easy trap.",
       },
     ],
   },
   {
-    id: "export",
-    keywords: ["export", "pdf", "print", "download report"],
-    title: "Exporting a FinFlow report to PDF",
+    id: "groupby",
+    keywords: ["group by", "aggregate", "aggregation", "having"],
+    title: "GROUP BY column rules",
     askCount: 14,
     pastConversation: [
-      { from: "asker", text: "The PDF export button does nothing on the monthly report." },
+      { from: "asker", text: "SQL says my SELECT doesn't match GROUP BY." },
       {
         from: "expert",
-        text: "You have to set the branch filter first or the export silently fails — undocumented quirk in how our bank configured FinFlow.",
+        text: "Every non-aggregated column in SELECT must be in GROUP BY. Wrap the rest in SUM/MAX or drop them.",
       },
     ],
   },
 ];
 
-/** Signals that a question is so broad it would pull in half the workforce. */
 const broadSignals = [
   "everything",
   "all of",
@@ -86,39 +79,46 @@ const broadSignals = [
   "from scratch",
   "get up to speed",
   "overview of",
-  "teach me finflow",
-  "learn finflow",
+  "teach me sql",
+  "learn sql",
+  "all sql",
   "end to end",
   "end-to-end",
 ];
 
 const paperLibrary: Record<string, Resource> = {
-  FinFlow: {
-    title: "FinFlow Branch Admin Guide (internal wiki)",
+  SQL: {
+    title: "SQL Style Guide (internal wiki)",
     source: "Internal Knowledge Base",
     type: "internal",
     url: "#",
   },
-  "Loan Approval": {
-    title: "Credit Risk & Loan Origination Workflows: A Review",
-    source: "Journal of Banking & Finance, 2022",
+  JOINs: {
+    title: "Join Processing in Relational Databases: A Survey",
+    source: "ACM Computing Surveys, 2021",
     type: "paper",
     url: "#",
   },
-  "Compliance Reporting": {
-    title: "Automating Regulatory Reporting in Retail Banking",
-    source: "Int. Journal of Bank Marketing, 2021",
+  Aggregations: {
+    title: "Aggregation Pushdown in Analytical SQL Engines",
+    source: "VLDB, 2020",
     type: "paper",
     url: "#",
   },
-  "Legacy Core Banking": {
-    title: "Modernizing Legacy Core Banking Systems",
-    source: "IEEE Software, 2020",
+  "Window Functions": {
+    title: "Window Functions in Modern SQL Warehouses",
+    source: "IEEE Data Engineering Bulletin, 2022",
     type: "paper",
     url: "#",
   },
-  Reporting: {
-    title: "Our FinFlow Reporting Cookbook (internal)",
+  "Query Optimization": {
+    title: "Our Query Tuning Playbook (internal)",
+    source: "Internal Knowledge Base",
+    type: "internal",
+    url: "#",
+  },
+  PostgreSQL: {
+    title: "PostgreSQL Query Planner Explained",
     source: "Internal Knowledge Base",
     type: "internal",
     url: "#",
@@ -126,13 +126,12 @@ const paperLibrary: Record<string, Resource> = {
 };
 
 const defaultResource: Resource = {
-  title: "Knowledge Transfer & the Retirement of Experts in Organizations",
-  source: "Academy of Management Review, 2019",
+  title: "Learning SQL: From Simple Queries to Complex Analytics",
+  source: "O'Reilly, 2023",
   type: "paper",
   url: "#",
 };
 
-/** Build a small, relevant reading list from the detected topic tags. */
 export function resourcesForTags(tags: string[]): Resource[] {
   const picks = tags
     .map((t) => paperLibrary[t])
@@ -142,32 +141,28 @@ export function resourcesForTags(tags: string[]): Resource[] {
   return unique.slice(0, 3);
 }
 
-/** Turn detected tags into a focused, learnable topic + subtopics. */
 function buildTopic(tags: string[]): { summaryTopic: string; subtopics: string[] } {
-  const lead = tags[0];
+  const lead = tags[0] ?? "SQL";
   return {
-    summaryTopic: lead
-      ? `${lead} for branch managers`
-      : "FinFlow fundamentals for branch managers",
+    summaryTopic: `${lead} fundamentals for analysts`,
     subtopics: [
-      lead ? `Core ${lead} workflows we use day-to-day` : "Daily FinFlow workflows",
-      "Where our bank's setup differs from the vendor defaults",
-      "The 3 reports a branch manager actually needs",
+      `Core ${lead} patterns we use on real data`,
+      "Common mistakes on our warehouse tables",
+      "One query you can reuse this week",
     ],
   };
 }
 
-/** A few focused topics to offer, one per detected area, plus a fallback. */
 function buildTopicOptions(
   tags: string[]
 ): { summaryTopic: string; subtopics: string[] }[] {
   const perTag = tags.map((t) => buildTopic([t, ...tags.filter((x) => x !== t)]));
   const fallback = {
-    summaryTopic: "A 30-minute FinFlow starter for branch managers",
+    summaryTopic: "A 30-minute SQL starter for analysts",
     subtopics: [
-      "Just the screens you touch weekly",
-      "The 3 reports that matter for your branch",
-      "Who to ask when something breaks",
+      "SELECT, WHERE, and JOIN basics",
+      "When to use a subquery vs a JOIN",
+      "Who to ask when a query won't run",
     ],
   };
   const all = [...perTag, fallback];
@@ -176,12 +171,6 @@ function buildTopicOptions(
   ).slice(0, 4);
 }
 
-/**
- * Simulated "AI triage". Decides whether a question is:
- *  - faq    → answer with anonymized past sessions (saves an expert's time)
- *  - broad  → too big; summarize a focused learning topic and route that on
- *  - expert → genuine, scoped company-specific question → match a human directly
- */
 export function analyzeQuery(query: string): QueryAnalysis {
   const text = query.toLowerCase();
   const tags = extractTagsFromQuery(query, mockPeers);
@@ -198,12 +187,9 @@ export function analyzeQuery(query: string): QueryAnalysis {
     };
   }
 
-  // Only treat a question as "too broad" when it actually signals scope
-  // ("everything", "entire", "from scratch", …) — not just because it touches
-  // several topics. A focused multi-tag question still goes straight to a human.
   const isBroad = broadSignals.some((s) => text.includes(s));
   if (isBroad) {
-    const focused = tags.slice(0, 3);
+    const focused = tags.length > 0 ? tags.slice(0, 3) : ["SQL", "JOINs", "Aggregations"];
     const topicOptions = buildTopicOptions(focused);
     return {
       kind: "broad",
@@ -222,10 +208,6 @@ export function analyzeQuery(query: string): QueryAnalysis {
   };
 }
 
-/**
- * Simulated re-check of a topic the user typed themselves. Confirms it's
- * specific enough to route to one expert (not vague, not "everything").
- */
 export function validateCustomTopic(topic: string): {
   ok: boolean;
   message: string;
@@ -237,33 +219,58 @@ export function validateCustomTopic(topic: string): {
   if (words.length < 2) {
     return {
       ok: false,
-      message: "Too vague — add a bit more detail so we can match the right expert.",
+      message: "Too vague — add a bit more detail so we can match the right helper.",
     };
   }
   if (broadSignals.some((s) => lower.includes(s)) || /\ball\b/.test(lower)) {
     return {
       ok: false,
-      message: "Still too broad — narrow it to one specific area or task.",
+      message: "Still too broad — narrow it to one specific SQL area or task.",
     };
   }
   return {
     ok: true,
-    message: "Looks focused enough — routing you to the right experts.",
+    message: "Looks focused enough — routing you to the right helpers.",
   };
 }
 
-/** Demo shortcuts so each AI path is easy to show in a pitch. */
+export interface FollowUpQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
+export function getBroadFollowUps(_query: string): FollowUpQuestion[] {
+  return [
+    {
+      id: "area",
+      question: "Which SQL area do you need most right now?",
+      options: ["JOINs & relationships", "Aggregations & GROUP BY", "Window functions"],
+    },
+    {
+      id: "scope",
+      question: "What kind of data are you working with?",
+      options: ["Customer tables", "Sales & revenue", "Internal ops data"],
+    },
+    {
+      id: "tried",
+      question: "What have you already tried?",
+      options: ["Stack Overflow / docs", "Asked a colleague", "Nothing yet"],
+    },
+  ];
+}
+
 export const exampleQueries = [
   {
-    label: "Specific (→ expert)",
-    text: "I need help setting up loan-approval reports in our new FinFlow dashboard.",
+    label: "Specific",
+    text: "How do I write a SQL query that joins three tables and still runs fast on our warehouse?",
   },
   {
-    label: "Common (→ past answers)",
-    text: "I'm locked out of FinFlow before a client meeting.",
+    label: "Common",
+    text: "My GROUP BY query keeps failing — which columns should go in SELECT vs GROUP BY?",
   },
   {
-    label: "Too broad (→ focus topic)",
-    text: "Can someone teach me everything about our entire FinFlow and core banking setup from scratch?",
+    label: "Broad",
+    text: "Can someone teach me everything about SQL and our entire data warehouse from scratch?",
   },
 ];

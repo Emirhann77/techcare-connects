@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import GamificationHeader from "@/components/GamificationHeader";
+import BackButton from "@/components/BackButton";
+import SectionDivider from "@/components/SectionDivider";
 import AiFilter, { type ProceedContext } from "@/components/AiFilter";
 import AvailabilityStep, { type AvailabilityChoice } from "@/components/AvailabilityStep";
 import ChatModal from "@/components/ChatModal";
@@ -16,6 +17,9 @@ import TicketCreatedSuccess from "@/components/TicketCreatedSuccess";
 import TeamsIntegrationBanner from "@/components/TeamsIntegrationBanner";
 import HelperMotivationPanel from "@/components/HelperMotivationPanel";
 import HelperCapacityControl from "@/components/HelperCapacityControl";
+import WelcomeScreen from "@/components/WelcomeScreen";
+import OnboardingScreen from "@/components/OnboardingScreen";
+import CapacityNotificationBanner from "@/components/CapacityNotificationBanner";
 import {
   createInitialPoolTickets,
   currentUser,
@@ -29,7 +33,14 @@ import {
   type QuestionComplexity,
 } from "@/lib/mockData";
 
-type Stage = "filter" | "availability" | "ticket-created" | "pool-ticket" | "helper-propose";
+type Stage =
+  | "welcome"
+  | "onboarding"
+  | "filter"
+  | "availability"
+  | "ticket-created"
+  | "pool-ticket"
+  | "helper-propose";
 type Mode = "learning" | "teaching";
 
 interface Session {
@@ -101,7 +112,7 @@ function acceptProposalOnRequest(request: MyRequest): MyRequest {
 }
 
 export default function Home() {
-  const [stage, setStage] = useState<Stage>("filter");
+  const [stage, setStage] = useState<Stage>("welcome");
   const [problem, setProblem] = useState(currentUser.currentProblem);
   const [matchTags, setMatchTags] = useState<string[]>([]);
   const [focusTopic, setFocusTopic] = useState<string | undefined>(undefined);
@@ -168,6 +179,10 @@ export default function Home() {
       myRequests.length +
       1;
 
+    const topicLabel = focusTopic ?? matchTags[0] ?? "SQL";
+    const solveTime =
+      complexity === "Broad" ? "~45 min" : complexity === "Common" ? "~25 min" : "~20 min";
+
     const poolTicket: PoolTicket = {
       id: poolId,
       title: titleFromProblem(problem),
@@ -179,6 +194,8 @@ export default function Home() {
       askerName: currentUser.name,
       askerRole: currentUser.role,
       anonymousLabel: `Asker #${askerNumber}`,
+      topic: topicLabel,
+      estimatedSolveTime: solveTime,
       status: "open",
       postedAgo: "Just now",
       createdBy: currentUser.id,
@@ -346,7 +363,7 @@ export default function Home() {
   };
 
   const handleReset = () => {
-    setStage("filter");
+    setStage("welcome");
     setProblem(currentUser.currentProblem);
     setMatchTags([]);
     setFocusTopic(undefined);
@@ -363,71 +380,102 @@ export default function Home() {
     setResetKey((k) => k + 1);
   };
 
+  const askSection = (
+    <>
+      <div className="card-surface p-5 sm:p-6">
+        <p className="uppercase-label text-stone-400">Stage 01 · AI First Filter</p>
+        <h1 className="hero-headline mt-2 max-w-2xl">
+          What are you stuck on,{" "}
+          <span className="bg-gradient-to-r from-accent-pink to-accent-orange bg-clip-text text-transparent">
+            {currentUser.name}?
+          </span>
+        </h1>
+        <p className="mt-3 max-w-xl text-stone-500">
+          Start with the AI. If it can&apos;t answer your SQL question, we&apos;ll route
+          you to a colleague who&apos;s solved it on our data.
+        </p>
+        <div className="mt-6">
+          <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
+        </div>
+      </div>
+      <TeamsIntegrationBanner />
+      <MyRequestsStrip
+        requests={myRequests}
+        onChat={handleOpenMyRequestChat}
+        onAcceptProposal={handleAcceptProposal}
+      />
+    </>
+  );
+
+  const helpSection = (
+    <>
+      <HelperMotivationPanel />
+      <HelperCapacityControl
+        capacity={helperCapacity}
+        activeHelping={myActiveHelps.length}
+        onChange={setHelperCapacity}
+      />
+      <CapacityNotificationBanner atCapacity={atHelperCapacity} />
+      <TicketPoolStrip
+        tickets={openPoolTickets}
+        onSelect={(t) => {
+          setSelectedPoolTicket(t);
+          setStage("pool-ticket");
+        }}
+      />
+      <MyHelpingStrip
+        tickets={myActiveHelps}
+        onChat={handleOpenHelpingChat}
+        onPropose={(t) => {
+          setSelectedPoolTicket(t);
+          setStage("helper-propose");
+        }}
+      />
+    </>
+  );
+
+  const showAppHeader = stage !== "welcome" && stage !== "onboarding";
+
   return (
     <div className="min-h-screen">
-      <GamificationHeader
-        userName={currentUser.name}
-        points={points}
-        recentlyEarned={recentlyEarned}
-        onReset={handleReset}
-      />
+      {stage === "welcome" ? (
+        <WelcomeScreen onContinue={() => setStage("onboarding")} />
+      ) : (
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
+        {showAppHeader && (
+          <GamificationHeader
+            userName={currentUser.name}
+            points={points}
+            recentlyEarned={recentlyEarned}
+            onReset={handleReset}
+          />
+        )}
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+        {stage === "onboarding" && (
+          <>
+            <BackButton onClick={() => setStage("welcome")} />
+            <OnboardingScreen onContinue={() => setStage("filter")} />
+          </>
+        )}
+
         {stage === "filter" && (
-          <section className="space-y-5">
-            <div>
-              <p className="uppercase-label text-stone-400">Stage 01 · AI First Filter</p>
-              <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
-                What are you stuck on,{" "}
-                <span className="text-brand-600">{currentUser.name}?</span>
-              </h1>
-              <p className="mt-3 max-w-xl text-stone-500">
-                Start with the AI. If it can&apos;t actually help, we&apos;ll route you to
-                a human who&apos;s been there.
-              </p>
-              <div className="mt-6">
-                <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
-              </div>
-            </div>
-
-            <TeamsIntegrationBanner />
-            <HelperMotivationPanel />
-            <HelperCapacityControl
-              capacity={helperCapacity}
-              activeHelping={myActiveHelps.length}
-              onChange={setHelperCapacity}
+          <section className="space-y-8 animate-fade-in">
+            <BackButton onClick={() => setStage("onboarding")} />
+            <SectionDivider title="Learning · get help" accent="pink" />
+            <div className="space-y-5">{askSection}</div>
+            <SectionDivider
+              title="Now it's your turn to help"
+              accent="orange"
+              centered
             />
-            <MyRequestsStrip
-              requests={myRequests}
-              onChat={handleOpenMyRequestChat}
-              onAcceptProposal={handleAcceptProposal}
-            />
-            <TicketPoolStrip
-              tickets={openPoolTickets}
-              onSelect={(t) => {
-                setSelectedPoolTicket(t);
-                setStage("pool-ticket");
-              }}
-            />
-            <MyHelpingStrip
-              tickets={myActiveHelps}
-              onChat={handleOpenHelpingChat}
-              onPropose={(t) => {
-                setSelectedPoolTicket(t);
-                setStage("helper-propose");
-              }}
-            />
-            {atHelperCapacity && (
-              <p className="text-center text-xs text-amber-600">
-                You&apos;re at your helping limit ({helperCapacity}). New pool tickets
-                are visible but paused until a slot opens.
-              </p>
-            )}
+            <div className="space-y-5">{helpSection}</div>
           </section>
         )}
 
         {stage === "ticket-created" && justCreated && (
-          <TicketCreatedSuccess
+          <>
+            <BackButton onClick={() => { setJustCreated(null); setStage("filter"); }} />
+            <TicketCreatedSuccess
             request={justCreated}
             onGoHome={() => {
               setJustCreated(null);
@@ -435,6 +483,7 @@ export default function Home() {
             }}
             onAcceptProposal={handleAcceptProposal}
           />
+          </>
         )}
 
         {stage === "pool-ticket" && selectedPoolTicket && (
@@ -462,20 +511,14 @@ export default function Home() {
 
         {stage === "availability" && (
           <section>
-            <button
-              onClick={() => setStage("filter")}
-              className="uppercase-label mb-4 inline-flex items-center gap-1.5 text-stone-400 transition hover:text-stone-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
+            <BackButton onClick={() => setStage("filter")} />
             <p className="uppercase-label text-stone-400">Stage 02 · Post to pool</p>
             <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
               When works for <span className="text-brand-600">you?</span>
             </h1>
             <p className="mt-3 max-w-xl text-stone-500">
-              Pick your free times and urgency. Complexity is set by the AI — helpers
-              propose the meeting location after they claim your ticket.
+              Pick your free times and urgency. Helpers propose the meeting time and
+              location after they claim your ticket.
             </p>
 
             {atRequestLimit && (
@@ -489,13 +532,13 @@ export default function Home() {
             <div className="mt-8">
               <AvailabilityStep
                 key={resetKey}
-                complexity={complexity}
                 onContinue={atRequestLimit ? () => {} : handlePostToPool}
               />
             </div>
           </section>
         )}
       </main>
+      )}
 
       {session && (
         <ChatModal

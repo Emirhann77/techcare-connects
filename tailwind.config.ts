@@ -7,9 +7,15 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
       },
       colors: {
+        accent: {
+          pink: "#ec4899",
+          orange: "#f97316",
+        },
+        connect: "#60a5fa",
         // Warm terracotta / clay accent (editorial look).
         brand: {
           50: "#faf3ee",

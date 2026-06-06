@@ -16,13 +16,13 @@ export default function HelperCapacityControl({
   const atCapacity = activeHelping >= capacity;
 
   return (
-    <div className="rounded-2xl border border-paper-300 bg-white p-4">
+    <div className="card-surface p-4 sm:p-5">
       <p className="uppercase-label flex items-center gap-2 text-stone-400">
         <Users className="h-4 w-4" />
         Your helping capacity this week
       </p>
       <p className="mt-1 text-xs text-stone-500">
-        Protect your time — set how many pool tickets you can realistically help.
+        Set how many pool tickets you can realistically help.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {[1, 2, 3].map((n) => (
@@ -31,8 +31,8 @@ export default function HelperCapacityControl({
             onClick={() => onChange(n)}
             className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
               capacity === n
-                ? "border-stone-900 bg-stone-900 text-white"
-                : "border-paper-300 text-stone-600 hover:border-stone-400"
+                ? "border-transparent bg-gradient-to-r from-accent-pink to-accent-orange text-white shadow-sm"
+                : "border-paper-200 text-stone-600 hover:border-accent-pink/30"
             }`}
           >
             {n} / week

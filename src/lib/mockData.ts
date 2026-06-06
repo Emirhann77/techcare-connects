@@ -69,7 +69,7 @@ export const currentUser: CurrentUser = {
   role: "Branch Manager · 20 yrs at the bank",
   gamificationPoints: 12,
   currentProblem:
-    "I need help setting up loan-approval reports in our new FinFlow dashboard.",
+    "How do I write a SQL query that joins three tables and still runs fast on our warehouse?",
 };
 
 export type TicketUrgency = "High" | "Normal" | "Low";
@@ -86,7 +86,7 @@ export const complexityLabels: Record<
 > = {
   Specific: { label: "Specific", hint: "Needs an internal expert" },
   Common: { label: "Common", hint: "Seen before — may still need a person" },
-  Broad: { label: "Too broad", hint: "AI focused the topic first" },
+  Broad: { label: "Broad", hint: "AI focused the topic first" },
 };
 
 export interface MeetingProposal {
@@ -123,6 +123,9 @@ export interface Ticket {
   fromRole: string;
   title: string;
   detail: string;
+  /** Shown on pool cards instead of asker identity. */
+  topic: string;
+  estimatedSolveTime: string;
   tags: string[];
   urgency: TicketUrgency;
   postedAgo: string;
@@ -149,6 +152,8 @@ export interface PoolTicket {
   askerRole: string;
   /** Anonymous label helpers see (e.g. "Asker #2"). */
   anonymousLabel: string;
+  topic: string;
+  estimatedSolveTime: string;
   status: PoolTicketStatus;
   claimedBy?: string;
   /** Revealed to both parties once the ticket is claimed. */
@@ -218,10 +223,12 @@ export const mockTickets: Ticket[] = [
   {
     id: "t-1",
     fromName: "Jonas Weber",
-    fromRole: "New Teller (2 weeks in)",
+    fromRole: "New Teller",
     title: "Which figure is the real cash position?",
     detail:
       "I can't tell which FinFlow number is the actual end-of-day cash position for our branch. There seem to be three.",
+    topic: "FinFlow · Cash reporting",
+    estimatedSolveTime: "~20 min",
     tags: ["FinFlow", "Reporting"],
     urgency: "High",
     postedAgo: "20m ago",
@@ -233,6 +240,8 @@ export const mockTickets: Ticket[] = [
     title: "My first mortgage approval",
     detail:
       "Which internal checks does our branch require before I submit a mortgage approval in FinFlow?",
+    topic: "Loan approval workflow",
+    estimatedSolveTime: "~45 min",
     tags: ["Loan Approval", "FinFlow"],
     urgency: "Normal",
     postedAgo: "1h ago",
@@ -244,6 +253,8 @@ export const mockTickets: Ticket[] = [
     title: "Old account won't migrate",
     detail:
       "A customer's legacy account won't move to the new core system. What did we used to do in this case?",
+    topic: "Legacy core banking",
+    estimatedSolveTime: "~30 min",
     tags: ["Legacy Core Banking"],
     urgency: "High",
     postedAgo: "2h ago",
@@ -269,6 +280,8 @@ export function createInitialPoolTickets(): PoolTicket[] {
     askerName: t.fromName,
     askerRole: t.fromRole,
     anonymousLabel: `Asker #${i + 1}`,
+    topic: t.topic,
+    estimatedSolveTime: t.estimatedSolveTime,
     status: "open" as const,
     postedAgo: t.postedAgo,
   }));
@@ -282,68 +295,68 @@ export const mockPeers: Peer[] = [
   {
     id: "p-almira",
     name: "Almira Voss",
-    role: "Senior Loan Officer",
-    experienceTags: ["FinFlow", "Loan Approval", "Core Banking"],
+    role: "Senior Data Engineer",
+    experienceTags: ["SQL", "JOINs", "Query Optimization"],
     availabilityStatus: "Available",
     gamificationPoints: 248,
-    blurb: "Built the original FinFlow loan-approval workflow for our branches.",
+    blurb: "Optimizes warehouse queries the team runs every day.",
     availableSlots: ["s1", "s3"],
   },
   {
     id: "p-tomas",
     name: "Tomas Berg",
-    role: "Legacy Systems Engineer",
-    experienceTags: ["Legacy Core Banking", "FinFlow", "Internal Tools"],
+    role: "Analytics Engineer",
+    experienceTags: ["SQL", "Aggregations", "PostgreSQL"],
     availabilityStatus: "Available",
     gamificationPoints: 176,
-    blurb: "Knows every undocumented quirk in our core banking platform.",
+    blurb: "Knows every GROUP BY and CTE pattern in our data stack.",
     availableSlots: ["s2", "s4"],
   },
   {
     id: "p-priya",
     name: "Priya Nair",
-    role: "Compliance Manager",
-    experienceTags: ["Compliance Reporting", "FinFlow", "Regulations"],
+    role: "BI Lead",
+    experienceTags: ["SQL", "Window Functions", "Reporting"],
     availabilityStatus: "Busy",
     gamificationPoints: 132,
-    blurb: "Owns how our bank configured FinFlow for regulatory reports.",
+    blurb: "Writes the window-function reports leadership actually uses.",
     availableSlots: ["s3"],
   },
   {
     id: "p-dmitri",
     name: "Dmitri Sokolov",
-    role: "Digital Banking Specialist",
-    experienceTags: ["FinFlow", "Reporting", "Automation"],
+    role: "Data Platform Specialist",
+    experienceTags: ["SQL", "Indexing", "Performance"],
     availabilityStatus: "Available",
     gamificationPoints: 98,
-    blurb: "Automates branch reporting inside FinFlow all day long.",
+    blurb: "Makes slow queries fast across our warehouse tables.",
     availableSlots: ["s1", "s2"],
   },
   {
     id: "p-lena",
     name: "Lena Fischer",
-    role: "Branch Operations Veteran (retiring Q4)",
-    experienceTags: ["FinFlow", "Legacy Core Banking", "Tribal Knowledge"],
+    role: "SQL Veteran (retiring Q4)",
+    experienceTags: ["SQL", "Legacy Queries", "Tribal Knowledge"],
     availabilityStatus: "Away",
     gamificationPoints: 410,
-    blurb: "30 years of institutional memory walking out the door soon.",
+    blurb: "30 years of query patterns walking out the door soon.",
     availableSlots: ["s4"],
   },
   {
     id: "p-marco",
     name: "Marco Ruiz",
     role: "Systems Integration Engineer",
-    experienceTags: ["Core Banking", "FinFlow", "APIs"],
+    experienceTags: ["SQL", "ETL", "PostgreSQL"],
     availabilityStatus: "Available",
     gamificationPoints: 87,
-    blurb: "Connects FinFlow to our older core banking systems.",
+    blurb: "Connects raw tables to clean analyst-ready views.",
     availableSlots: ["s1", "s4"],
   },
   {
     id: "p-sara",
     name: "Sara Lindqvist",
     role: "Onboarding Buddy",
-    experienceTags: ["Onboarding", "Internal Tools", "Mentoring"],
+    experienceTags: ["SQL", "Onboarding", "Mentoring"],
     availabilityStatus: "Available",
     gamificationPoints: 64,
     blurb: "Loves helping colleagues get comfortable with new tools.",
@@ -353,10 +366,10 @@ export const mockPeers: Peer[] = [
     id: "p-kwame",
     name: "Kwame Mensah",
     role: "Business Analyst",
-    experienceTags: ["Reporting", "Dashboards", "FinFlow"],
+    experienceTags: ["SQL", "Reporting", "Dashboards"],
     availabilityStatus: "Busy",
     gamificationPoints: 51,
-    blurb: "Turns raw branch data into clean FinFlow dashboards.",
+    blurb: "Turns messy tables into clean SQL reports.",
     availableSlots: ["s4"],
   },
 ];

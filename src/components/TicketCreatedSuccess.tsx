@@ -41,8 +41,7 @@ export default function TicketCreatedSuccess({
         </div>
         <p className="mt-2 font-serif text-xl text-stone-900">{request.title}</p>
         <p className="mt-1 text-sm text-stone-500">
-          Status: {request.status} · Urgency: {request.urgency} · AI complexity:{" "}
-          {request.complexity}
+          Status: {request.status} · Urgency: {request.urgency}
         </p>
         {displayHelperName(request) && (
           <p className="mt-2 text-sm font-medium text-brand-700">

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Bot, CalendarDays, Check, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Zap } from "lucide-react";
 import {
-  complexityLabels,
   questionUrgencyOptions,
   timeSlots,
-  type QuestionComplexity,
   type QuestionUrgency,
 } from "@/lib/mockData";
 
@@ -16,14 +14,10 @@ export interface AvailabilityChoice {
 }
 
 interface AvailabilityStepProps {
-  complexity: QuestionComplexity;
   onContinue: (choice: AvailabilityChoice) => void;
 }
 
-export default function AvailabilityStep({
-  complexity,
-  onContinue,
-}: AvailabilityStepProps) {
+export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) {
   const [slots, setSlots] = useState<string[]>([]);
   const [urgency, setUrgency] = useState<QuestionUrgency>("Normal");
 
@@ -33,23 +27,16 @@ export default function AvailabilityStep({
     );
   };
 
-  const complexityInfo = complexityLabels[complexity];
-
   return (
     <div className="mx-auto w-full max-w-2xl animate-fade-in">
       <div className="rounded-3xl border border-paper-300 bg-white p-6 shadow-sm sm:p-7">
-        <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3">
-          <p className="uppercase-label flex items-center gap-2 text-brand-700">
-            <Bot className="h-4 w-4" />
-            AI set complexity
-          </p>
-          <p className="mt-1 font-serif text-lg text-stone-900">{complexityInfo.label}</p>
-          <p className="text-xs text-stone-500">{complexityInfo.hint}</p>
-        </div>
-
-        <p className="uppercase-label mt-6 flex items-center gap-2 text-stone-400">
+        <p className="uppercase-label flex items-center gap-2 text-stone-400">
           <CalendarDays className="h-4 w-4" />
           When are you free?
+        </p>
+        <p className="mt-2 text-sm text-stone-500">
+          Pick windows that work for you. The exact meeting time will be decided based
+          on the helper&apos;s availability after they claim your ticket.
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -127,8 +114,8 @@ export default function AvailabilityStep({
         </button>
         <p className="mt-2 text-center text-xs text-stone-400">
           {slots.length > 0
-            ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected · location set by helper after claim`
-            : "Tip: pick at least one slot — helpers propose the meeting place"}
+            ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected`
+            : "Tip: pick at least one slot"}
         </p>
       </div>
     </div>

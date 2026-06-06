@@ -15,6 +15,7 @@ import {
 import {
   analyzeQuery,
   exampleQueries,
+  getBroadFollowUps,
   validateCustomTopic,
   type QueryAnalysis,
 } from "@/lib/aiAnalysis";
@@ -109,7 +110,7 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
           <button
             onClick={submit}
             disabled={phase === "analyzing"}
-            className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+            className="btn-gradient inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 active:scale-95 disabled:opacity-50"
           >
             {phase === "analyzing" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -191,11 +192,10 @@ function ExpertVerdict({
 }) {
   return (
     <VerdictShell tone="amber">
-      <p className="uppercase-label text-amber-700">AI can&apos;t answer this</p>
+      <p className="uppercase-label text-amber-700">Good specific question</p>
       <p className="mt-2 text-stone-700">
-        This needs <span className="font-semibold">company-specific experience</span>{" "}
-        that isn&apos;t in any manual, on Google, or in a general AI model. Let&apos;s
-        find a colleague who has actually lived this.
+        This is a focused SQL question — we&apos;ll forward it to a matching colleague
+        who&apos;s solved this on our actual data before.
       </p>
       <button
         onClick={onProceed}
@@ -218,6 +218,9 @@ function BroadVerdict({
   analysis: Extract<QueryAnalysis, { kind: "broad" }>;
   onProceed: (topic: string) => void;
 }) {
+  const followUps = getBroadFollowUps("");
+  const [step, setStep] = useState<"challenge" | "topic">("challenge");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [idx, setIdx] = useState(0);
   const [custom, setCustom] = useState("");
   const [check, setCheck] = useState<{
@@ -225,6 +228,7 @@ function BroadVerdict({
     message: string;
   }>({ status: "idle", message: "" });
 
+  const allAnswered = followUps.every((q) => answers[q.id]);
   const usingCustom = custom.trim().length > 0;
   const current = analysis.topicOptions[idx];
   const chosenTopic = usingCustom ? custom.trim() : current.summaryTopic;
@@ -238,7 +242,6 @@ function BroadVerdict({
       onProceed(chosenTopic);
       return;
     }
-    // The AI "re-checks" a user-written topic before routing it on.
     setCheck({ status: "checking", message: "" });
     setTimeout(() => {
       const res = validateCustomTopic(custom);
@@ -247,17 +250,66 @@ function BroadVerdict({
     }, 900);
   };
 
+  if (step === "challenge") {
+    return (
+      <VerdictShell tone="clay">
+        <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
+          <Users className="h-4 w-4" />
+          Let&apos;s be specific!
+        </p>
+        <p className="mt-2 text-stone-700">
+          That&apos;s a broad ask — answer a few quick questions so we can narrow it to
+          one SQL topic before posting to the pool.
+        </p>
+        <div className="mt-4 space-y-4">
+          {followUps.map((q) => (
+            <div key={q.id} className="rounded-2xl border border-paper-300 bg-white p-4">
+              <p className="text-sm font-semibold text-stone-800">{q.question}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {q.options.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      answers[q.id] === opt
+                        ? "border-brand-600 bg-brand-600 text-white"
+                        : "border-paper-300 text-stone-600 hover:border-brand-300"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => allAnswered && setStep("topic")}
+          disabled={!allAnswered}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
+        >
+          Continue with a focused topic
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </VerdictShell>
+    );
+  }
+
   return (
     <VerdictShell tone="clay">
       <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
         <Users className="h-4 w-4" />
-        That&apos;s a big ask
+        Focused topic for you to learn about…
       </p>
       <p className="mt-2 text-stone-700">
-        Answering this fully would pull in half the team. Instead, the AI has scoped
-        it into one focused topic you can learn — then routes just that to the right
-        people.
+        Based on your answers, here&apos;s a scoped SQL topic — then we&apos;ll post it to
+        the ticket pool for the right helper.
       </p>
+      {Object.keys(answers).length > 0 && (
+        <p className="mt-2 text-xs text-stone-500">
+          You said: {Object.values(answers).join(" · ")}
+        </p>
+      )}
 
       <div className="mt-4 rounded-2xl border border-brand-200 bg-white p-4">
         <p className="uppercase-label text-stone-400">Suggested learning topic</p>
@@ -357,7 +409,7 @@ function BroadVerdict({
           </>
         ) : (
           <>
-            Focus on this topic &amp; find experts
+            Focus on this topic &amp; post to pool
             <ArrowRight className="h-4 w-4" />
           </>
         )}

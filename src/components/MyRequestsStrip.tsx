@@ -42,7 +42,7 @@ export default function MyRequestsStrip({
   };
 
   return (
-    <div className="rounded-3xl border border-brand-200 bg-brand-50/50 p-4">
+    <div className="card-surface border-accent-pink/20 bg-gradient-to-br from-white to-accent-pink/5 p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between">
         <p className="uppercase-label flex items-center gap-2 text-brand-700">
           <Send className="h-4 w-4" />

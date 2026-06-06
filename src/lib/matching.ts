@@ -18,13 +18,16 @@ export function extractTagsFromQuery(query: string, peers: Peer[]): string[] {
 
   // Loose keyword hints so the demo still matches if exact tags aren't typed.
   const hints: Array<[string, string]> = [
-    ["finflow", "FinFlow"],
-    ["loan", "Loan Approval"],
-    ["dashboard", "Dashboards"],
-    ["report", "Reporting"],
-    ["compliance", "Compliance Reporting"],
-    ["legacy", "Legacy Core Banking"],
-    ["core banking", "Core Banking"],
+    ["sql", "SQL"],
+    ["join", "JOINs"],
+    ["group by", "Aggregations"],
+    ["aggregate", "Aggregations"],
+    ["window", "Window Functions"],
+    ["rank", "Window Functions"],
+    ["postgres", "PostgreSQL"],
+    ["index", "Indexing"],
+    ["slow query", "Query Optimization"],
+    ["optimize", "Query Optimization"],
   ];
   for (const [keyword, tag] of hints) {
     if (haystack.includes(keyword) && allTags.includes(tag)) direct.push(tag);

@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowLeft, Clock, HeartHandshake } from "lucide-react";
+import { Clock, HeartHandshake } from "lucide-react";
+import BackButton from "./BackButton";
 import {
-  complexityLabels,
   displayAskerName,
   MAX_ACTIVE_TICKETS,
   slotLabel,
@@ -35,13 +35,7 @@ export default function PoolTicketDetail({
 
   return (
     <section className="animate-fade-in">
-      <button
-        onClick={onBack}
-        className="uppercase-label mb-4 inline-flex items-center gap-1.5 text-stone-400 transition hover:text-stone-700"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to pool
-      </button>
+      <BackButton onClick={onBack} label="Back to pool" />
 
       <p className="uppercase-label text-stone-400">Ticket pool · detail</p>
       <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
@@ -74,9 +68,6 @@ export default function PoolTicketDetail({
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full bg-paper-100 px-2.5 py-1 text-xs font-medium text-stone-600">
-              AI: {complexityLabels[ticket.complexity].label}
-            </span>
             {ticket.askerSlots.map((id) => (
               <span
                 key={id}

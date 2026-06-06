@@ -43,7 +43,7 @@ export default function MyHelpingStrip({
   if (tickets.length === 0) return null;
 
   return (
-    <div className="rounded-3xl border border-emerald-200 bg-emerald-50/40 p-4">
+    <div className="card-surface border-connect/25 bg-gradient-to-br from-white to-connect/5 p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between">
         <p className="uppercase-label flex items-center gap-2 text-emerald-700">
           <HeartHandshake className="h-4 w-4" />
