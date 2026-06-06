@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, Circle, Clock, MessageSquarePlus, Award } from "lucide-react";
-import { timeSlots, type Peer } from "@/lib/mockData";
+import { expertInitials, timeSlots, type Peer } from "@/lib/mockData";
 
 interface PeerCardProps {
   peer: Peer;
@@ -47,15 +47,12 @@ export default function PeerCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 font-serif text-sm font-bold text-white">
-            {peer.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)}
+            {expertInitials(peer)}
           </div>
           <div className="leading-tight">
             <p className="font-serif text-lg font-semibold text-stone-900">{peer.name}</p>
             <p className="text-xs text-stone-500">{peer.role}</p>
+            <p className="text-[10px] text-stone-400">Matched by skills · name hidden</p>
           </div>
         </div>
         <div className={`flex items-center gap-1 text-xs font-medium ${status.text}`}>

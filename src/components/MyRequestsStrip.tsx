@@ -75,7 +75,7 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
               </div>
               <p className="font-serif text-base leading-snug text-stone-900">{r.title}</p>
               <p className="text-xs text-stone-500">
-                With {r.expertName.split(" ")[0]} · {r.expertRole}
+                {r.expertName} · {r.expertRole}
               </p>
               <span
                 className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${

@@ -15,6 +15,7 @@ import {
 import {
   analyzeQuery,
   exampleQueries,
+  getBroadFollowUps,
   validateCustomTopic,
   type QueryAnalysis,
 } from "@/lib/aiAnalysis";
@@ -210,6 +211,9 @@ function BroadVerdict({
   analysis: Extract<QueryAnalysis, { kind: "broad" }>;
   onProceed: (topic: string) => void;
 }) {
+  const followUps = getBroadFollowUps("");
+  const [step, setStep] = useState<"challenge" | "topic">("challenge");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [idx, setIdx] = useState(0);
   const [custom, setCustom] = useState("");
   const [check, setCheck] = useState<{
@@ -217,6 +221,7 @@ function BroadVerdict({
     message: string;
   }>({ status: "idle", message: "" });
 
+  const allAnswered = followUps.every((q) => answers[q.id]);
   const usingCustom = custom.trim().length > 0;
   const current = analysis.topicOptions[idx];
   const chosenTopic = usingCustom ? custom.trim() : current.summaryTopic;
@@ -239,17 +244,66 @@ function BroadVerdict({
     }, 900);
   };
 
+  if (step === "challenge") {
+    return (
+      <VerdictShell tone="clay">
+        <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
+          <Users className="h-4 w-4" />
+          Let me challenge you first
+        </p>
+        <p className="mt-2 text-stone-700">
+          That&apos;s a big ask — before I suggest a topic, help me understand what you
+          actually need so you arrive at the expert with a clear question.
+        </p>
+        <div className="mt-4 space-y-4">
+          {followUps.map((q) => (
+            <div key={q.id} className="rounded-2xl border border-paper-300 bg-white p-4">
+              <p className="text-sm font-semibold text-stone-800">{q.question}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {q.options.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                      answers[q.id] === opt
+                        ? "border-brand-600 bg-brand-600 text-white"
+                        : "border-paper-300 text-stone-600 hover:border-brand-300"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => allAnswered && setStep("topic")}
+          disabled={!allAnswered}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
+        >
+          Continue with a focused topic
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </VerdictShell>
+    );
+  }
+
   return (
     <VerdictShell tone="clay">
       <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
         <Users className="h-4 w-4" />
-        That&apos;s a big ask
+        Focused topic for you
       </p>
       <p className="mt-2 text-stone-700">
-        Answering this fully would pull in half the team. Instead, the AI has scoped
-        it into one focused topic you can learn — then routes just that to the right
-        people.
+        Based on your answers, here&apos;s a scoped topic — then we&apos;ll match experts
+        who fit your times.
       </p>
+      {Object.keys(answers).length > 0 && (
+        <p className="mt-2 text-xs text-stone-500">
+          You said: {Object.values(answers).join(" · ")}
+        </p>
+      )}
 
       <div className="mt-4 rounded-2xl border border-brand-200 bg-white p-4">
         <p className="uppercase-label text-stone-400">Suggested learning topic</p>

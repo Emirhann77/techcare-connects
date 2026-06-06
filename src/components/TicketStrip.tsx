@@ -70,7 +70,7 @@ export default function TicketStrip({ tickets, onSelect }: TicketStripProps) {
             </div>
             <p className="font-serif text-base leading-snug text-stone-900">{t.title}</p>
             <p className="text-xs text-stone-500">
-              {t.fromName} · {t.fromRole}
+              {t.fromName} · {t.fromRole} · identity hidden
             </p>
             <div className="mt-1 flex flex-wrap gap-1">
               {t.tags.slice(0, 2).map((tag) => (

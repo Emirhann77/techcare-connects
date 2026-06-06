@@ -1,4 +1,4 @@
-import type { Peer } from "./mockData";
+import type { Peer, QuestionUrgency } from "./mockData";
 
 const availabilityWeight: Record<Peer["availabilityStatus"], number> = {
   Available: 3,
@@ -46,7 +46,17 @@ export interface MatchOptions {
   selectedSlots?: string[];
   /** If true, also include Busy/Away experts the user is willing to wait for. */
   okayToWait?: boolean;
+  /** Urgent questions boost experts who are available at the earliest overlap. */
+  urgency?: QuestionUrgency;
 }
+
+/** Earlier slots in the list = sooner (for urgent prioritisation). */
+const slotEarliness: Record<string, number> = {
+  s1: 4,
+  s2: 3,
+  s3: 2,
+  s4: 1,
+};
 
 /**
  * Sorts peers by how well their experience tags overlap with the query tags,
@@ -63,6 +73,7 @@ export function matchPeers(
   const tagSet = new Set(queryTags.map((t) => t.toLowerCase()));
   const slotSet = new Set(options.selectedSlots ?? []);
   const okayToWait = options.okayToWait ?? false;
+  const isUrgent = options.urgency === "Urgent";
 
   return peers
     .filter((peer) => okayToWait || peer.availabilityStatus === "Available")
@@ -75,9 +86,14 @@ export function matchPeers(
       const slotScore = matchedSlots.length * 6;
       const availScore = availabilityWeight[peer.availabilityStatus];
       const reputationScore = peer.gamificationPoints / 100;
+      const earliestOverlap = matchedSlots.reduce(
+        (best, s) => Math.max(best, slotEarliness[s] ?? 0),
+        0
+      );
+      const urgentBoost = isUrgent ? earliestOverlap * 4 : 0;
       return {
         peer,
-        score: overlapScore + slotScore + availScore + reputationScore,
+        score: overlapScore + slotScore + availScore + reputationScore + urgentBoost,
         matchedTags,
         matchedSlots,
       };

@@ -10,7 +10,7 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { meetingSpots, type Peer } from "@/lib/mockData";
+import { expertInitials, meetingSpots, type Peer } from "@/lib/mockData";
 import { resourcesForTags } from "@/lib/aiAnalysis";
 import ResourceList from "./ResourceList";
 
@@ -146,7 +146,7 @@ export default function ChatModal({
   onClose,
   onResolve,
 }: ChatModalProps) {
-  const firstName = peer.name.split(" ")[0];
+  const expertLabel = peer.name;
   const spotLabel = meetingSpots.find((m) => m.id === spot)?.label ?? "Online";
   const isLocal = spot === "coffee" || spot === "desk";
   const isTeaching = mode === "teaching";
@@ -175,22 +175,21 @@ export default function ChatModal({
   const conversationUnlocked =
     conversationConsent.me && conversationConsent.peer;
   const myRole: "helper" | "helpee" = isTeaching ? "helper" : "helpee";
-  const helperLabel = isTeaching ? userName.split(" ")[0] : firstName;
-  const helpeeLabel = isTeaching ? firstName : userName.split(" ")[0];
+  const helperLabel = isTeaching ? userName.split(" ")[0] : expertLabel;
+  const helpeeLabel = isTeaching ? expertLabel : userName.split(" ")[0];
 
   const requestConsent = (
     setter: React.Dispatch<React.SetStateAction<DualConsent>>,
     peerName: string
   ) => {
     setter((c) => ({ ...c, me: true, peerPending: true }));
-    // Simulate the other person reviewing and accepting.
     setTimeout(() => {
       setter((c) => ({ ...c, peer: true, peerPending: false }));
       setMessages((m) => [
         ...m,
         {
           from: "peer",
-          text: `${peerName} agreed to knowledge capture. ✅`,
+          text: `Your matched colleague agreed to knowledge capture. ✅`,
         },
       ]);
     }, 1200);
@@ -230,14 +229,11 @@ export default function ChatModal({
         <div className="flex items-center justify-between border-b border-paper-200 bg-white px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 font-serif text-xs font-bold text-white">
-              {peer.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
+              {expertInitials(peer)}
             </div>
             <div className="leading-tight">
               <p className="font-serif text-base font-semibold text-stone-900">{peer.name}</p>
+              <p className="text-[10px] text-stone-400">{peer.role}</p>
               <p className="flex items-center gap-1 text-xs text-emerald-600">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Connected · {spotLabel}
@@ -255,7 +251,7 @@ export default function ChatModal({
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-paper-50 p-4">
           <p className="mx-auto w-fit rounded-full bg-paper-200 px-3 py-1 text-center text-[11px] text-stone-500">
-            You connected with {firstName}. Knowledge transfer in progress.
+            Connected with {expertLabel}. Knowledge transfer in progress.
           </p>
           {messages.map((msg, i) => (
             <div
@@ -289,7 +285,7 @@ export default function ChatModal({
                 helperLabel={helperLabel}
                 helpeeLabel={helpeeLabel}
                 myRole={myRole}
-                onMeAccept={() => requestConsent(setAudioConsent, firstName)}
+                onMeAccept={() => requestConsent(setAudioConsent, expertLabel)}
               />
               <ConsentRow
                 label="Save conversation"
@@ -297,7 +293,7 @@ export default function ChatModal({
                 helperLabel={helperLabel}
                 helpeeLabel={helpeeLabel}
                 myRole={myRole}
-                onMeAccept={() => requestConsent(setConversationConsent, firstName)}
+                onMeAccept={() => requestConsent(setConversationConsent, expertLabel)}
               />
             </div>
 

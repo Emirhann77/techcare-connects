@@ -252,6 +252,33 @@ export function validateCustomTopic(topic: string): {
   };
 }
 
+export interface FollowUpQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
+/** Coach feedback: AI should challenge broad questions before suggesting a topic. */
+export function getBroadFollowUps(_query: string): FollowUpQuestion[] {
+  return [
+    {
+      id: "area",
+      question: "Which area do you need most right now?",
+      options: ["FinFlow reports", "Core banking workflows", "Compliance setup"],
+    },
+    {
+      id: "scope",
+      question: "Who is this for?",
+      options: ["Just my branch", "My whole department", "Only me learning"],
+    },
+    {
+      id: "tried",
+      question: "What have you already tried?",
+      options: ["Vendor documentation", "Asked a colleague", "Nothing yet"],
+    },
+  ];
+}
+
 /** Demo shortcuts so each AI path is easy to show in a pitch. */
 export const exampleQueries = [
   {

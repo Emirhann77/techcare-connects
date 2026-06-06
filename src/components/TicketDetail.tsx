@@ -8,7 +8,8 @@ import ResourceList from "./ResourceList";
 interface TicketDetailProps {
   ticket: Ticket;
   onBack: () => void;
-  onHelp: (ticket: Ticket) => void;
+  onHelp?: (ticket: Ticket) => void;
+  atCapacity?: boolean;
 }
 
 const urgencyStyles: Record<TicketUrgency, string> = {
@@ -17,7 +18,12 @@ const urgencyStyles: Record<TicketUrgency, string> = {
   Low: "bg-stone-100 text-stone-500",
 };
 
-export default function TicketDetail({ ticket, onBack, onHelp }: TicketDetailProps) {
+export default function TicketDetail({
+  ticket,
+  onBack,
+  onHelp,
+  atCapacity,
+}: TicketDetailProps) {
   const resources = resourcesForTags(ticket.tags);
 
   return (
@@ -37,6 +43,7 @@ export default function TicketDetail({ ticket, onBack, onHelp }: TicketDetailPro
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-stone-500">
         <span className="font-medium text-stone-700">{ticket.fromName}</span>
+        <span className="text-xs text-stone-400">(identity hidden)</span>
         <span>·</span>
         <span>{ticket.fromRole}</span>
         <span
@@ -68,13 +75,20 @@ export default function TicketDetail({ ticket, onBack, onHelp }: TicketDetailPro
             ))}
           </div>
 
-          <button
-            onClick={() => onHelp(ticket)}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
-          >
-            <HeartHandshake className="h-4 w-4" />
-            Help {ticket.fromName.split(" ")[0]} (Earn 4 pts)
-          </button>
+          {atCapacity ? (
+            <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+              You&apos;re at your weekly helping limit. Finish an open session or raise
+              your capacity on the home page.
+            </p>
+          ) : (
+            <button
+              onClick={() => onHelp?.(ticket)}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
+            >
+              <HeartHandshake className="h-4 w-4" />
+              Help {ticket.fromName} (Earn 4 pts)
+            </button>
+          )}
         </div>
 
         <div className="mt-4">

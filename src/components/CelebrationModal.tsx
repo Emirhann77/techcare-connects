@@ -16,13 +16,12 @@ export default function CelebrationModal({
   mode = "learning",
   onClose,
 }: CelebrationModalProps) {
-  const peerName = peer.name.split(" ")[0];
-  // In teaching mode the user IS the teacher, so the point split flips.
+  const peerLabel = peer.name;
   const teacher = mode === "teaching"
     ? { name: userName, points: gamificationRules.HELPER_POINTS }
-    : { name: peerName, points: gamificationRules.HELPER_POINTS };
+    : { name: peerLabel, points: gamificationRules.HELPER_POINTS };
   const learner = mode === "teaching"
-    ? { name: peerName, points: gamificationRules.LEARNER_POINTS }
+    ? { name: peerLabel, points: gamificationRules.LEARNER_POINTS }
     : { name: userName, points: gamificationRules.LEARNER_POINTS };
 
   return (

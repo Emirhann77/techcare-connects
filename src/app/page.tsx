@@ -1,17 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import GamificationHeader from "@/components/GamificationHeader";
 import AiFilter, { type ProceedContext } from "@/components/AiFilter";
-import AvailabilityStep, { type AvailabilityChoice } from "@/components/AvailabilityStep";
-import PeerCard from "@/components/PeerCard";
+import ExpertsAndTimesStep from "@/components/ExpertsAndTimesStep";
+import type { AvailabilityChoice } from "@/components/AvailabilityStep";
 import ChatModal from "@/components/ChatModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import TicketStrip from "@/components/TicketStrip";
 import MyRequestsStrip from "@/components/MyRequestsStrip";
 import TicketDetail from "@/components/TicketDetail";
 import TicketCreatedSuccess from "@/components/TicketCreatedSuccess";
+import TeamsIntegrationBanner from "@/components/TeamsIntegrationBanner";
+import HelperMotivationPanel from "@/components/HelperMotivationPanel";
+import HelperCapacityControl from "@/components/HelperCapacityControl";
 import {
   currentUser,
   gamificationRules,
@@ -22,9 +25,8 @@ import {
   type Peer,
   type Ticket,
 } from "@/lib/mockData";
-import { matchPeers } from "@/lib/matching";
 
-type Stage = "filter" | "availability" | "matches" | "ticket-created" | "ticket";
+type Stage = "filter" | "experts-times" | "ticket-created" | "ticket";
 type Mode = "learning" | "teaching";
 
 interface Session {
@@ -72,7 +74,6 @@ export default function Home() {
   const [problem, setProblem] = useState(currentUser.currentProblem);
   const [matchTags, setMatchTags] = useState<string[]>([]);
   const [focusTopic, setFocusTopic] = useState<string | undefined>(undefined);
-  const [availability, setAvailability] = useState<AvailabilityChoice | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
   const [justCreated, setJustCreated] = useState<MyRequest | null>(null);
@@ -81,31 +82,20 @@ export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [celebrate, setCelebrate] = useState<{ peer: Peer; mode: Mode } | null>(null);
   const [resetKey, setResetKey] = useState(0);
+  const [helperCapacity, setHelperCapacity] = useState(2);
+  const [helpingCount, setHelpingCount] = useState(mockTickets.length);
 
   const atRequestLimit = myRequests.length >= MAX_ACTIVE_TICKETS;
-
-  const matches = useMemo(
-    () =>
-      matchPeers(matchTags, mockPeers, {
-        selectedSlots: availability?.slots,
-        okayToWait: availability?.okayToWait,
-      }),
-    [matchTags, availability]
-  );
+  const atHelperCapacity = helpingCount >= helperCapacity;
 
   const handleProceed = (ctx: ProceedContext) => {
     setProblem(ctx.problem);
     setMatchTags(ctx.tags);
     setFocusTopic(ctx.topic);
-    setStage("availability");
+    setStage("experts-times");
   };
 
-  const handleAvailability = (choice: AvailabilityChoice) => {
-    setAvailability(choice);
-    setStage("matches");
-  };
-
-  const handleCreateRequest = (peer: Peer) => {
+  const handleCreateRequest = (peer: Peer, choice: AvailabilityChoice) => {
     if (atRequestLimit) return;
 
     const id = `my-${Date.now()}`;
@@ -119,8 +109,8 @@ export default function Home() {
       tags: peer.experienceTags.filter((t) =>
         matchTags.some((m) => m.toLowerCase() === t.toLowerCase())
       ),
-      urgency: availability?.urgency ?? "Normal",
-      spot: availability?.spot ?? "online",
+      urgency: choice.urgency,
+      spot: choice.spot,
       status: "Pending",
       createdAgo: "Just now",
     };
@@ -129,7 +119,6 @@ export default function Home() {
     setJustCreated(request);
     setStage("ticket-created");
 
-    // Simulate the expert accepting — chat unlocks from My requests.
     setTimeout(() => {
       setMyRequests((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: "Ready" as const } : r))
@@ -162,9 +151,11 @@ export default function Home() {
     setCelebrate({ peer, mode });
     setSession(null);
 
-    // Remove resolved learning request from open list (frees a slot).
     if (mode === "learning" && session?.myRequestId) {
       setMyRequests((prev) => prev.filter((r) => r.id !== session.myRequestId));
+    }
+    if (mode === "teaching") {
+      setHelpingCount((c) => Math.max(0, c - 1));
     }
   };
 
@@ -173,7 +164,6 @@ export default function Home() {
     setProblem(currentUser.currentProblem);
     setMatchTags([]);
     setFocusTopic(undefined);
-    setAvailability(null);
     setSelectedTicket(null);
     setMyRequests([]);
     setJustCreated(null);
@@ -181,6 +171,8 @@ export default function Home() {
     setRecentlyEarned(null);
     setSession(null);
     setCelebrate(null);
+    setHelperCapacity(2);
+    setHelpingCount(mockTickets.length);
     setResetKey((k) => k + 1);
   };
 
@@ -195,18 +187,8 @@ export default function Home() {
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
         {stage === "filter" && (
-          <section className="space-y-4">
-            <TicketStrip
-              tickets={mockTickets.slice(0, MAX_ACTIVE_TICKETS)}
-              onSelect={(t) => {
-                setSelectedTicket(t);
-                setStage("ticket");
-              }}
-            />
-
-            <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
-
-            <div className="mt-4">
+          <section className="space-y-5">
+            <div>
               <p className="uppercase-label text-stone-400">Stage 01 · AI First Filter</p>
               <h1 className="mt-2 max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
                 What are you stuck on,{" "}
@@ -216,10 +198,33 @@ export default function Home() {
                 Start with the AI. If it can&apos;t actually help, we&apos;ll route you to
                 a human who&apos;s been there.
               </p>
-              <div className="mt-8">
+              <div className="mt-6">
                 <AiFilter key={resetKey} defaultProblem={problem} onProceed={handleProceed} />
               </div>
             </div>
+
+            <TeamsIntegrationBanner />
+            <HelperMotivationPanel />
+            <HelperCapacityControl
+              capacity={helperCapacity}
+              activeHelping={helpingCount}
+              onChange={setHelperCapacity}
+            />
+            <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
+            <TicketStrip
+              tickets={mockTickets.slice(0, MAX_ACTIVE_TICKETS)}
+              onSelect={(t) => {
+                if (atHelperCapacity) return;
+                setSelectedTicket(t);
+                setStage("ticket");
+              }}
+            />
+            {atHelperCapacity && (
+              <p className="text-center text-xs text-amber-600">
+                You&apos;re at your weekly helping limit ({helperCapacity}). New assigned
+                tickets are visible but paused until a slot opens.
+              </p>
+            )}
           </section>
         )}
 
@@ -240,18 +245,22 @@ export default function Home() {
               setSelectedTicket(null);
               setStage("filter");
             }}
-            onHelp={(t) =>
-              setSession({
-                peer: ticketToPeer(t),
-                mode: "teaching",
-                problem: t.detail,
-                spot: "online",
-              })
+            onHelp={
+              atHelperCapacity
+                ? undefined
+                : (t) =>
+                    setSession({
+                      peer: ticketToPeer(t),
+                      mode: "teaching",
+                      problem: t.detail,
+                      spot: "online",
+                    })
             }
+            atCapacity={atHelperCapacity}
           />
         )}
 
-        {stage === "availability" && (
+        {stage === "experts-times" && (
           <section>
             <button
               onClick={() => setStage("filter")}
@@ -260,115 +269,21 @@ export default function Home() {
               <ArrowLeft className="h-4 w-4" />
               Back
             </button>
-            <p className="uppercase-label text-stone-400">Stage 02 · Your Availability</p>
+            <p className="uppercase-label text-stone-400">Stage 02 · Times &amp; experts</p>
             <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
-              When works for <span className="text-brand-600">you?</span>
+              Pick your times, see <span className="text-brand-600">who&apos;s free</span>
             </h1>
             <p className="mt-3 max-w-xl text-stone-500">
-              {focusTopic ? (
-                <>
-                  Focused topic: <span className="font-medium text-stone-700">{focusTopic}</span>.
-                  Pick when you&apos;re free — we&apos;ll only show experts whose calendar
-                  overlaps yours.
-                </>
-              ) : (
-                <>
-                  Pick the windows you&apos;re free. We&apos;ll only show experts whose
-                  calendar overlaps yours — so no one&apos;s time gets wasted.
-                </>
-              )}
+              Choose when you&apos;re available once — experts update live below. No second
+              time prompt later.
             </p>
             <div className="mt-8">
-              <AvailabilityStep key={resetKey} onContinue={handleAvailability} />
-            </div>
-          </section>
-        )}
-
-        {stage === "matches" && (
-          <section className="animate-fade-in">
-            <button
-              onClick={() => setStage("availability")}
-              className="uppercase-label mb-4 inline-flex items-center gap-1.5 text-stone-400 transition hover:text-stone-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-            <p className="uppercase-label text-stone-400">Stage 03 · Peer Matches</p>
-            <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
-              Top <span className="text-brand-600">{matches.length}</span> people
-              <br className="hidden sm:block" /> who can actually help.
-            </h1>
-            <p className="mt-3 max-w-xl text-stone-500">
-              {matches.length > 0 ? (
-                <>Showing the best matches first so the right people aren&apos;t overwhelmed. </>
-              ) : (
-                <>
-                  No one matches your times right now. Go back and tick &ldquo;I&apos;m okay
-                  to wait&rdquo; to include busy experts.{" "}
-                </>
-              )}
-              {availability && !availability.okayToWait
-                ? "Only people available right now."
-                : availability?.okayToWait
-                  ? "Including busy experts you'll wait for."
-                  : ""}
-            </p>
-            {availability && (
-              <p className="mt-2 text-sm text-stone-500">
-                Urgency:{" "}
-                <span
-                  className={`font-semibold ${
-                    availability.urgency === "Urgent"
-                      ? "text-red-600"
-                      : availability.urgency === "Can wait"
-                        ? "text-stone-500"
-                        : "text-brand-600"
-                  }`}
-                >
-                  {availability.urgency}
-                </span>
-                {availability.urgency === "Urgent" &&
-                  " — we'll prioritise experts who are free soon."}
-              </p>
-            )}
-
-            {atRequestLimit && (
-              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                You already have {MAX_ACTIVE_TICKETS} open requests. Resolve one from{" "}
-                <span className="font-semibold">My requests</span> on the home page before
-                creating another — we cap it so experts aren&apos;t overwhelmed.
-              </div>
-            )}
-
-            {matches.length > 0 && (
-              <div className="mt-6 rounded-3xl border border-brand-200 bg-white p-5">
-                <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
-                  <Sparkles className="h-4 w-4" />
-                  #1 Match
-                </p>
-                <p className="mt-1 font-serif text-2xl text-stone-900">
-                  <span className="text-brand-600">{matches[0].peer.name.split(" ")[0]}</span>{" "}
-                  knows {matches[0].matchedTags[0]}.{" "}
-                  <span className="text-stone-400">Create a ticket to connect.</span>
-                </p>
-              </div>
-            )}
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {matches.map(({ peer, matchedTags, matchedSlots }, i) => (
-                <PeerCard
-                  key={peer.id}
-                  peer={peer}
-                  matchedTags={matchedTags}
-                  matchedSlots={matchedSlots}
-                  highlight={i === 0}
-                  connectDisabled={atRequestLimit}
-                  connectLabel={
-                    atRequestLimit ? "Limit reached (3/3)" : "Create ticket"
-                  }
-                  onConnect={handleCreateRequest}
-                />
-              ))}
+              <ExpertsAndTimesStep
+                matchTags={matchTags}
+                focusTopic={focusTopic}
+                atRequestLimit={atRequestLimit}
+                onCreateTicket={handleCreateRequest}
+              />
             </div>
           </section>
         )}

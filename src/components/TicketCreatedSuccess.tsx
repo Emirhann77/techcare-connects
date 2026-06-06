@@ -12,8 +12,6 @@ export default function TicketCreatedSuccess({
   request,
   onGoHome,
 }: TicketCreatedSuccessProps) {
-  const expertFirst = request.expertName.split(" ")[0];
-
   return (
     <section className="mx-auto max-w-lg animate-fade-in text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -21,13 +19,13 @@ export default function TicketCreatedSuccess({
       </div>
       <p className="uppercase-label mt-6 text-stone-400">Ticket created</p>
       <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900">
-        We&apos;ve routed your question to{" "}
-        <span className="text-brand-600">{expertFirst}</span>.
+        We&apos;ve routed your question to a{" "}
+        <span className="text-brand-600">matched expert</span>.
       </h1>
       <p className="mt-3 text-sm text-stone-500">
-        Your ticket is in the queue. {expertFirst} will be notified — you can open
-        the chat from <span className="font-medium text-stone-700">My requests</span> on
-        the home page once they&apos;re ready.
+        Your ticket is in the queue. They&apos;ll be notified — open the chat from{" "}
+        <span className="font-medium text-stone-700">My requests</span> on the home
+        page once they&apos;re ready. Names stay hidden until you connect.
       </p>
 
       <div className="mt-8 rounded-3xl border border-paper-300 bg-white p-5 text-left shadow-sm">
