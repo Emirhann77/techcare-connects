@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, Check, Clock, MapPin, Users } from "lucide-react";
-import { meetingSpots, timeSlots } from "@/lib/mockData";
+import { ArrowRight, CalendarDays, Check, MapPin, Users, Zap } from "lucide-react";
+import {
+  meetingSpots,
+  questionUrgencyOptions,
+  timeSlots,
+  type QuestionUrgency,
+} from "@/lib/mockData";
 
 export interface AvailabilityChoice {
   slots: string[];
   spot: string;
+  urgency: QuestionUrgency;
   okayToWait: boolean;
 }
 
@@ -17,6 +23,7 @@ interface AvailabilityStepProps {
 export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) {
   const [slots, setSlots] = useState<string[]>([]);
   const [spot, setSpot] = useState<string>(meetingSpots[0].id);
+  const [urgency, setUrgency] = useState<QuestionUrgency>("Normal");
   const [okayToWait, setOkayToWait] = useState(false);
 
   const toggleSlot = (id: string) => {
@@ -27,79 +34,102 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
 
   return (
     <div className="mx-auto w-full max-w-2xl animate-fade-in">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white">
-            <CalendarClock className="h-5 w-5" />
-          </div>
-          <div className="leading-tight">
-            <p className="font-semibold text-slate-900">When works for you?</p>
-            <p className="text-xs text-slate-500">
-              Step 2 · We&apos;ll match you with experts free at the same time
-            </p>
-          </div>
-        </div>
+      <div className="rounded-3xl border border-paper-300 bg-white p-6 shadow-sm sm:p-7">
+        <p className="uppercase-label flex items-center gap-2 text-stone-400">
+          <CalendarDays className="h-4 w-4" />
+          Choose one or more
+        </p>
 
-        <div className="mt-5">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-            <Clock className="h-4 w-4 text-slate-400" />
-            Pick the times you&apos;re available
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {timeSlots.map((slot) => {
-              const selected = slots.includes(slot.id);
-              return (
-                <button
-                  key={slot.id}
-                  onClick={() => toggleSlot(slot.id)}
-                  className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {timeSlots.map((slot) => {
+            const selected = slots.includes(slot.id);
+            return (
+              <button
+                key={slot.id}
+                onClick={() => toggleSlot(slot.id)}
+                className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition ${
+                  selected
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-paper-300 hover:border-stone-300"
+                }`}
+              >
+                <span className="font-serif text-lg text-stone-900">{slot.label}</span>
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                     selected
-                      ? "border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
-                      : "border-slate-200 text-slate-700 hover:border-slate-300"
+                      ? "border-brand-600 bg-brand-600 text-white"
+                      : "border-stone-300 text-transparent"
                   }`}
                 >
-                  {slot.label}
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                      selected
-                        ? "border-brand-600 bg-brand-600 text-white"
-                        : "border-slate-300 text-transparent"
-                    }`}
-                  >
-                    <Check className="h-3 w-3" />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                  <Check className="h-3 w-3" />
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-5">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-            <MapPin className="h-4 w-4 text-slate-400" />
-            Where would you like to meet?
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {meetingSpots.map((m) => {
-              const selected = spot === m.id;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setSpot(m.id)}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                    selected
-                      ? "border-brand-500 bg-brand-50 text-brand-700"
-                      : "border-slate-200 text-slate-600 hover:border-slate-300"
+        <p className="uppercase-label mt-6 flex items-center gap-2 text-stone-400">
+          <Zap className="h-4 w-4" />
+          How urgent is your question?
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {questionUrgencyOptions.map((opt) => {
+            const selected = urgency === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setUrgency(opt.id)}
+                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                  selected
+                    ? opt.id === "Urgent"
+                      ? "border-red-400 bg-red-50 ring-1 ring-red-200"
+                      : opt.id === "Can wait"
+                        ? "border-stone-400 bg-stone-50 ring-1 ring-stone-200"
+                        : "border-brand-500 bg-brand-50 ring-1 ring-brand-200"
+                    : "border-paper-300 hover:border-stone-300"
+                }`}
+              >
+                <span
+                  className={`text-sm font-semibold ${
+                    selected && opt.id === "Urgent"
+                      ? "text-red-700"
+                      : selected
+                        ? "text-stone-900"
+                        : "text-stone-700"
                   }`}
                 >
-                  {m.label}
-                </button>
-              );
-            })}
-          </div>
+                  {opt.label}
+                </span>
+                <span className="mt-0.5 block text-xs text-stone-500">{opt.hint}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-slate-50 p-4">
+        <p className="uppercase-label mt-6 flex items-center gap-2 text-stone-400">
+          <MapPin className="h-4 w-4" />
+          Where to meet
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {meetingSpots.map((m) => {
+            const selected = spot === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSpot(m.id)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  selected
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-paper-300 text-stone-600 hover:border-stone-300"
+                }`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="mt-6 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
             checked={okayToWait}
@@ -107,24 +137,25 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
             className="mt-0.5 h-4 w-4 accent-brand-600"
           />
           <span className="text-sm">
-            <span className="flex items-center gap-1.5 font-medium text-slate-800">
-              <Users className="h-4 w-4 text-slate-400" />
+            <span className="flex items-center gap-1.5 font-medium text-stone-800">
+              <Users className="h-4 w-4 text-stone-400" />
               I&apos;m okay to wait for busy experts
             </span>
-            <span className="text-slate-500">
-              Also show people who are Busy or Away — the best person to help may
-              not be free right now.
+            <span className="text-stone-500">
+              Also show people who are Busy or Away — the best person may not be free
+              right now.
             </span>
           </span>
         </label>
 
         <button
-          onClick={() => onContinue({ slots, spot, okayToWait })}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99]"
+          onClick={() => onContinue({ slots, spot, urgency, okayToWait })}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
         >
           Find matching experts
+          <ArrowRight className="h-4 w-4" />
         </button>
-        <p className="mt-2 text-center text-xs text-slate-400">
+        <p className="mt-2 text-center text-xs text-stone-400">
           {slots.length > 0
             ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected`
             : "Tip: pick at least one slot for the best time match"}

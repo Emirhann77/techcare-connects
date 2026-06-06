@@ -72,6 +72,92 @@ export const currentUser: CurrentUser = {
     "I need help setting up loan-approval reports in our new FinFlow dashboard.",
 };
 
+export type TicketUrgency = "High" | "Normal" | "Low";
+
+/** How soon the asker needs an answer — set when picking time slots. */
+export type QuestionUrgency = "Urgent" | "Normal" | "Can wait";
+
+export const questionUrgencyOptions: {
+  id: QuestionUrgency;
+  label: string;
+  hint: string;
+}[] = [
+  { id: "Urgent", label: "Urgent", hint: "I need help today" },
+  { id: "Normal", label: "Normal", hint: "Within the next few days" },
+  { id: "Can wait", label: "Can wait", hint: "No rush — whenever someone is free" },
+];
+
+/** Max open tickets per person — asking or helping — so nobody gets overwhelmed. */
+export const MAX_ACTIVE_TICKETS = 3;
+
+/** A help request from a colleague, assigned to Thomas (the experienced one). */
+export interface Ticket {
+  id: string;
+  fromName: string;
+  fromRole: string;
+  title: string;
+  detail: string;
+  tags: string[];
+  urgency: TicketUrgency;
+  postedAgo: string;
+}
+
+/** A request Thomas created by connecting with an expert (the asking side). */
+export interface MyRequest {
+  id: string;
+  peerId: string;
+  expertName: string;
+  expertRole: string;
+  title: string;
+  detail: string;
+  tags: string[];
+  urgency: QuestionUrgency;
+  spot: string;
+  status: "Pending" | "Ready";
+  createdAgo: string;
+}
+
+/**
+ * The "helping" side: requests routed to Thomas because of his 20 years of
+ * branch experience. This is how institutional knowledge gets pulled out of him
+ * before he retires.
+ */
+export const mockTickets: Ticket[] = [
+  {
+    id: "t-1",
+    fromName: "Jonas Weber",
+    fromRole: "New Teller (2 weeks in)",
+    title: "Which figure is the real cash position?",
+    detail:
+      "I can't tell which FinFlow number is the actual end-of-day cash position for our branch. There seem to be three.",
+    tags: ["FinFlow", "Reporting"],
+    urgency: "High",
+    postedAgo: "20m ago",
+  },
+  {
+    id: "t-2",
+    fromName: "Mei Lin",
+    fromRole: "Junior Loan Officer",
+    title: "My first mortgage approval",
+    detail:
+      "Which internal checks does our branch require before I submit a mortgage approval in FinFlow?",
+    tags: ["Loan Approval", "FinFlow"],
+    urgency: "Normal",
+    postedAgo: "1h ago",
+  },
+  {
+    id: "t-3",
+    fromName: "Carlos Mendes",
+    fromRole: "Customer Advisor",
+    title: "Old account won't migrate",
+    detail:
+      "A customer's legacy account won't move to the new core system. What did we used to do in this case?",
+    tags: ["Legacy Core Banking"],
+    urgency: "High",
+    postedAgo: "2h ago",
+  },
+];
+
 /**
  * The internal expert pool. These are colleagues with company-specific,
  * tribal knowledge that no search engine or general AI could ever surface.

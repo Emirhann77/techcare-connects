@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Circle, Clock, MessageSquarePlus, Trophy } from "lucide-react";
+import { CalendarClock, Circle, Clock, MessageSquarePlus, Award } from "lucide-react";
 import { timeSlots, type Peer } from "@/lib/mockData";
 
 interface PeerCardProps {
@@ -8,6 +8,8 @@ interface PeerCardProps {
   matchedTags: string[];
   matchedSlots?: string[];
   highlight?: boolean;
+  connectDisabled?: boolean;
+  connectLabel?: string;
   onConnect: (peer: Peer) => void;
 }
 
@@ -20,7 +22,7 @@ const statusStyles: Record<
 > = {
   Available: { dot: "text-emerald-500 fill-emerald-500", text: "text-emerald-600" },
   Busy: { dot: "text-amber-500 fill-amber-500", text: "text-amber-600" },
-  Away: { dot: "text-slate-400 fill-slate-400", text: "text-slate-500" },
+  Away: { dot: "text-stone-400 fill-stone-400", text: "text-stone-500" },
 };
 
 export default function PeerCard({
@@ -28,6 +30,8 @@ export default function PeerCard({
   matchedTags,
   matchedSlots = [],
   highlight,
+  connectDisabled,
+  connectLabel = "Create ticket",
   onConnect,
 }: PeerCardProps) {
   const status = statusStyles[peer.availabilityStatus];
@@ -36,13 +40,13 @@ export default function PeerCard({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
-        highlight ? "border-brand-300 ring-2 ring-brand-200" : "border-slate-200"
+      className={`flex flex-col gap-3 rounded-3xl border bg-white p-5 shadow-sm transition hover:shadow-md ${
+        highlight ? "border-brand-300 ring-1 ring-brand-200" : "border-paper-300"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 font-serif text-sm font-bold text-white">
             {peer.name
               .split(" ")
               .map((n) => n[0])
@@ -50,8 +54,8 @@ export default function PeerCard({
               .slice(0, 2)}
           </div>
           <div className="leading-tight">
-            <p className="font-semibold text-slate-900">{peer.name}</p>
-            <p className="text-xs text-slate-500">{peer.role}</p>
+            <p className="font-serif text-lg font-semibold text-stone-900">{peer.name}</p>
+            <p className="text-xs text-stone-500">{peer.role}</p>
           </div>
         </div>
         <div className={`flex items-center gap-1 text-xs font-medium ${status.text}`}>
@@ -60,7 +64,7 @@ export default function PeerCard({
         </div>
       </div>
 
-      <p className="text-sm text-slate-600">{peer.blurb}</p>
+      <p className="text-sm text-stone-600">{peer.blurb}</p>
 
       <div className="flex flex-wrap gap-1.5">
         {peer.experienceTags.map((tag) => {
@@ -71,7 +75,7 @@ export default function PeerCard({
               className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                 isMatch
                   ? "bg-brand-100 text-brand-700 ring-1 ring-brand-300"
-                  : "bg-slate-100 text-slate-600"
+                  : "bg-paper-100 text-stone-500"
               }`}
             >
               {tag}
@@ -92,17 +96,22 @@ export default function PeerCard({
         </div>
       ) : null}
 
-      <div className="mt-1 flex items-center justify-between border-t border-slate-100 pt-3">
-        <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
-          <Trophy className="h-3.5 w-3.5" />
+      <div className="mt-1 flex items-center justify-between border-t border-paper-200 pt-3">
+        <span className="flex items-center gap-1 text-xs font-medium text-brand-600">
+          <Award className="h-3.5 w-3.5" />
           {peer.gamificationPoints} pts
         </span>
         <button
-          onClick={() => onConnect(peer)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95"
+          onClick={() => !connectDisabled && onConnect(peer)}
+          disabled={connectDisabled}
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition active:scale-95 ${
+            connectDisabled
+              ? "cursor-not-allowed bg-stone-200 text-stone-400"
+              : "bg-brand-600 text-white hover:bg-brand-700"
+          }`}
         >
           <MessageSquarePlus className="h-4 w-4" />
-          Connect (Earn 2 pts)
+          {connectLabel}
         </button>
       </div>
     </div>

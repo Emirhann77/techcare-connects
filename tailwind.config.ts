@@ -6,18 +6,29 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+      },
       colors: {
+        // Warm terracotta / clay accent (editorial look).
         brand: {
-          50: "#eef6ff",
-          100: "#d9eaff",
-          200: "#bcd9ff",
-          300: "#8ec1ff",
-          400: "#599dff",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+          50: "#faf3ee",
+          100: "#f4e4d8",
+          200: "#e8c8b2",
+          300: "#daa585",
+          400: "#ca8059",
+          500: "#bb6440",
+          600: "#a8542f",
+          700: "#8a4429",
+          800: "#6f3823",
+          900: "#5c2f1f",
+        },
+        // Cream paper tones for backgrounds and surfaces.
+        paper: {
+          50: "#fbf8f2",
+          100: "#f6f1e8",
+          200: "#efe7d8",
+          300: "#e3d7c2",
         },
       },
       keyframes: {
