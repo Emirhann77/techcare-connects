@@ -64,28 +64,33 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
             <Bot className="h-4 w-4" />
             Ask anything
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {exampleQueries.map((ex) => {
-              const active = selectedExample === ex.label;
-              return (
-                <button
-                  key={ex.label}
-                  onClick={() => {
-                    setProblem(ex.text);
-                    setSelectedExample(ex.label);
-                    setPhase("input");
-                    setAnalysis(null);
-                  }}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                    active
-                      ? "border-brand-600 bg-brand-600 text-white"
-                      : "border-paper-300 text-stone-500 hover:border-brand-300 hover:text-brand-700"
-                  }`}
-                >
-                  {ex.label}
-                </button>
-              );
-            })}
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {exampleQueries.map((ex) => {
+                const active = selectedExample === ex.label;
+                return (
+                  <button
+                    key={ex.label}
+                    onClick={() => {
+                      setProblem(ex.text);
+                      setSelectedExample(ex.label);
+                      setPhase("input");
+                      setAnalysis(null);
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                      active
+                        ? "border-brand-600 bg-brand-600 text-white"
+                        : "border-paper-300 text-stone-500 hover:border-brand-300 hover:text-brand-700"
+                    }`}
+                  >
+                    {ex.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="w-full text-center text-sm font-medium italic text-stone-500">
+              It is for simulation purposes
+            </p>
           </div>
         </div>
 

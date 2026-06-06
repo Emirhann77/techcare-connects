@@ -461,7 +461,6 @@ export default function Home() {
         {stage === "filter" && (
           <section className="space-y-8 animate-fade-in">
             <BackButton onClick={() => setStage("onboarding")} />
-            <SectionDivider title="Learning · get help" accent="pink" />
             <div className="space-y-5">{askSection}</div>
             <SectionDivider
               title="Now it's your turn to help"
