@@ -131,7 +131,11 @@ export default function MyHelpingStrip({
                 }`}
               >
                 <MessageSquare className="h-3.5 w-3.5" />
-                {t.status === "ready" ? "Open chat" : "Waiting for helpee…"}
+                {t.status === "ready"
+                  ? "Open chat"
+                  : t.status === "negotiating"
+                    ? "Helpee reviewing…"
+                    : "Waiting for helpee…"}
               </button>
             )}
           </div>

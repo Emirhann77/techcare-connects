@@ -257,17 +257,33 @@ export default function Home() {
     setStage("helper-propose");
   };
 
+  const simulateHelpeeAccept = (poolTicketId: string, delayMs = 2500) => {
+    setTimeout(() => {
+      setPoolTickets((prev) =>
+        prev.map((t) =>
+          t.id === poolTicketId && t.proposal
+            ? acceptProposalOnTicket(t)
+            : t
+        )
+      );
+    }, delayMs);
+  };
+
   const handleSendProposal = (proposal: MeetingProposal) => {
     if (!selectedPoolTicket) return;
     const id = selectedPoolTicket.id;
+    const isHelpingSomeoneElse = selectedPoolTicket.createdBy !== currentUser.id;
 
     setPoolTickets((prev) =>
-      prev.map((t) =>
-        t.id === id ? applyProposal(t, proposal) : t
-      )
+      prev.map((t) => (t.id === id ? applyProposal(t, proposal) : t))
     );
     setSelectedPoolTicket(null);
     setStage("filter");
+
+    // Demo has no second user — auto-accept when we proposed to a colleague's ticket.
+    if (isHelpingSomeoneElse) {
+      simulateHelpeeAccept(id);
+    }
   };
 
   const handleAcceptProposal = (request: MyRequest) => {
