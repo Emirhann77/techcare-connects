@@ -1,7 +1,14 @@
 "use client";
 
 import { ArrowLeft, Clock, HeartHandshake } from "lucide-react";
-import { MAX_ACTIVE_TICKETS, type PoolTicket, type QuestionUrgency } from "@/lib/mockData";
+import {
+  complexityLabels,
+  displayAskerName,
+  MAX_ACTIVE_TICKETS,
+  slotLabel,
+  type PoolTicket,
+  type QuestionUrgency,
+} from "@/lib/mockData";
 import { resourcesForTags } from "@/lib/aiAnalysis";
 import ResourceList from "./ResourceList";
 
@@ -42,8 +49,10 @@ export default function PoolTicketDetail({
       </h1>
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-stone-500">
-        <span className="font-medium text-stone-700">{ticket.anonymousLabel}</span>
-        <span className="text-xs text-stone-400">(identity hidden)</span>
+        <span className="font-medium text-stone-700">{displayAskerName(ticket)}</span>
+        {ticket.status === "open" && (
+          <span className="text-xs text-stone-400">(identity hidden)</span>
+        )}
         <span>·</span>
         <span>{ticket.askerRole}</span>
         <span
@@ -63,6 +72,20 @@ export default function PoolTicketDetail({
           <p className="mt-3 font-serif text-2xl leading-snug text-stone-900">
             &ldquo;{ticket.detail}&rdquo;
           </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-paper-100 px-2.5 py-1 text-xs font-medium text-stone-600">
+              AI: {complexityLabels[ticket.complexity].label}
+            </span>
+            {ticket.askerSlots.map((id) => (
+              <span
+                key={id}
+                className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700"
+              >
+                Free: {slotLabel(id)}
+              </span>
+            ))}
+          </div>
 
           <div className="mt-5 flex flex-wrap gap-1.5">
             {ticket.tags.map((tag) => (
@@ -86,7 +109,7 @@ export default function PoolTicketDetail({
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
             >
               <HeartHandshake className="h-4 w-4" />
-              Claim &amp; help {ticket.anonymousLabel} (Earn 4 pts)
+              Claim &amp; help {displayAskerName(ticket)} (Earn 4 pts)
             </button>
           )}
         </div>

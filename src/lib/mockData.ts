@@ -77,6 +77,32 @@ export type TicketUrgency = "High" | "Normal" | "Low";
 /** How soon the asker needs an answer — set when picking time slots. */
 export type QuestionUrgency = "Urgent" | "Normal" | "Can wait";
 
+/** Set by the AI triage — helpee does not pick this manually. */
+export type QuestionComplexity = "Specific" | "Common" | "Broad";
+
+export const complexityLabels: Record<
+  QuestionComplexity,
+  { label: string; hint: string }
+> = {
+  Specific: { label: "Specific", hint: "Needs an internal expert" },
+  Common: { label: "Common", hint: "Seen before — may still need a person" },
+  Broad: { label: "Too broad", hint: "AI focused the topic first" },
+};
+
+export interface MeetingProposal {
+  spot: string;
+  slotId: string;
+  note?: string;
+}
+
+export function slotLabel(id: string): string {
+  return timeSlots.find((s) => s.id === id)?.label ?? id;
+}
+
+export function spotLabel(id: string): string {
+  return meetingSpots.find((m) => m.id === id)?.label ?? "Online";
+}
+
 export const questionUrgencyOptions: {
   id: QuestionUrgency;
   label: string;
@@ -102,7 +128,7 @@ export interface Ticket {
   postedAgo: string;
 }
 
-export type PoolTicketStatus = "open" | "claimed" | "ready";
+export type PoolTicketStatus = "open" | "claimed" | "negotiating" | "ready";
 
 /** A help request sitting in the shared pool — helpers pick what to work on. */
 export interface PoolTicket {
@@ -111,7 +137,13 @@ export interface PoolTicket {
   detail: string;
   tags: string[];
   urgency: QuestionUrgency;
-  spot: string;
+  complexity: QuestionComplexity;
+  /** Times the helpee said they're free — helper can pick or delay. */
+  askerSlots: string[];
+  /** Agreed after helpee accepts helper's proposal. */
+  agreedSpot?: string;
+  agreedSlotId?: string;
+  proposal?: MeetingProposal;
   /** Real asker name — never shown in the pool UI. */
   askerName: string;
   askerRole: string;
@@ -135,8 +167,12 @@ export interface MyRequest {
   detail: string;
   tags: string[];
   urgency: QuestionUrgency;
-  spot: string;
-  status: "In pool" | "Claimed" | "Ready";
+  complexity: QuestionComplexity;
+  askerSlots: string[];
+  agreedSpot?: string;
+  agreedSlotId?: string;
+  proposal?: MeetingProposal;
+  status: "In pool" | "Claimed" | "Awaiting OK" | "Ready";
   /** Real helper name — revealed once someone claims the ticket. */
   helperName?: string;
   helperRole?: string;
@@ -228,7 +264,8 @@ export function createInitialPoolTickets(): PoolTicket[] {
     detail: t.detail,
     tags: t.tags,
     urgency: ticketUrgencyToQuestion(t.urgency),
-    spot: "online",
+    complexity: "Specific",
+    askerSlots: ["s1", "s3"],
     askerName: t.fromName,
     askerRole: t.fromRole,
     anonymousLabel: `Asker #${i + 1}`,

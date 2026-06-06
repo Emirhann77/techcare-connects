@@ -18,12 +18,14 @@ import {
   validateCustomTopic,
   type QueryAnalysis,
 } from "@/lib/aiAnalysis";
+import type { QuestionComplexity } from "@/lib/mockData";
 import ResourceList from "./ResourceList";
 
 export interface ProceedContext {
   problem: string;
   tags: string[];
   topic?: string;
+  complexity: QuestionComplexity;
 }
 
 interface AiFilterProps {
@@ -125,20 +127,26 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
           {analysis.kind === "expert" && (
             <ExpertVerdict
               analysis={analysis}
-              onProceed={() => onProceed({ problem, tags: analysis.tags })}
+              onProceed={() =>
+                onProceed({ problem, tags: analysis.tags, complexity: "Specific" })
+              }
             />
           )}
           {analysis.kind === "broad" && (
             <BroadVerdict
               analysis={analysis}
-              onProceed={(topic) => onProceed({ problem, tags: analysis.tags, topic })}
+              onProceed={(topic) =>
+                onProceed({ problem, tags: analysis.tags, topic, complexity: "Broad" })
+              }
             />
           )}
           {analysis.kind === "faq" && (
             <FaqVerdict
               analysis={analysis}
               onSelfServed={() => setPhase("self-served")}
-              onProceed={() => onProceed({ problem, tags: analysis.tags })}
+              onProceed={() =>
+                onProceed({ problem, tags: analysis.tags, complexity: "Common" })
+              }
             />
           )}
         </div>
@@ -194,7 +202,7 @@ function ExpertVerdict({
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.99]"
       >
         <UserSearch className="h-4 w-4" />
-        Find an internal expert
+        Post to ticket pool
       </button>
       <div className="mt-4">
         <ResourceList resources={analysis.resources} />

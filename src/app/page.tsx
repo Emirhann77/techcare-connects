@@ -11,19 +11,25 @@ import TicketPoolStrip from "@/components/TicketPoolStrip";
 import MyHelpingStrip from "@/components/MyHelpingStrip";
 import MyRequestsStrip from "@/components/MyRequestsStrip";
 import PoolTicketDetail from "@/components/PoolTicketDetail";
+import HelperProposalStep from "@/components/HelperProposalStep";
 import TicketCreatedSuccess from "@/components/TicketCreatedSuccess";
+import TeamsIntegrationBanner from "@/components/TeamsIntegrationBanner";
+import HelperMotivationPanel from "@/components/HelperMotivationPanel";
+import HelperCapacityControl from "@/components/HelperCapacityControl";
 import {
   createInitialPoolTickets,
   currentUser,
   gamificationRules,
   MAX_ACTIVE_TICKETS,
   simulatedPoolHelper,
+  type MeetingProposal,
   type MyRequest,
   type Peer,
   type PoolTicket,
+  type QuestionComplexity,
 } from "@/lib/mockData";
 
-type Stage = "filter" | "availability" | "ticket-created" | "pool-ticket";
+type Stage = "filter" | "availability" | "ticket-created" | "pool-ticket" | "helper-propose";
 type Mode = "learning" | "teaching";
 
 interface Session {
@@ -67,11 +73,39 @@ function titleFromProblem(text: string): string {
   return `${trimmed.slice(0, 53)}…`;
 }
 
+function applyProposal(
+  ticket: PoolTicket,
+  proposal: MeetingProposal
+): PoolTicket {
+  return { ...ticket, status: "negotiating", proposal };
+}
+
+function acceptProposalOnTicket(ticket: PoolTicket): PoolTicket {
+  if (!ticket.proposal) return ticket;
+  return {
+    ...ticket,
+    status: "ready",
+    agreedSpot: ticket.proposal.spot,
+    agreedSlotId: ticket.proposal.slotId,
+  };
+}
+
+function acceptProposalOnRequest(request: MyRequest): MyRequest {
+  if (!request.proposal) return request;
+  return {
+    ...request,
+    status: "Ready",
+    agreedSpot: request.proposal.spot,
+    agreedSlotId: request.proposal.slotId,
+  };
+}
+
 export default function Home() {
   const [stage, setStage] = useState<Stage>("filter");
   const [problem, setProblem] = useState(currentUser.currentProblem);
   const [matchTags, setMatchTags] = useState<string[]>([]);
   const [focusTopic, setFocusTopic] = useState<string | undefined>(undefined);
+  const [complexity, setComplexity] = useState<QuestionComplexity>("Specific");
   const [poolTickets, setPoolTickets] = useState<PoolTicket[]>(createInitialPoolTickets);
   const [selectedPoolTicket, setSelectedPoolTicket] = useState<PoolTicket | null>(null);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
@@ -81,6 +115,7 @@ export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [celebrate, setCelebrate] = useState<{ peer: Peer; mode: Mode } | null>(null);
   const [resetKey, setResetKey] = useState(0);
+  const [helperCapacity, setHelperCapacity] = useState(2);
 
   const atRequestLimit = myRequests.length >= MAX_ACTIVE_TICKETS;
 
@@ -97,17 +132,29 @@ export default function Home() {
       poolTickets.filter(
         (t) =>
           t.claimedBy === currentUser.id &&
-          (t.status === "claimed" || t.status === "ready")
+          (t.status === "claimed" ||
+            t.status === "negotiating" ||
+            t.status === "ready")
       ),
     [poolTickets]
   );
 
-  const atHelperCapacity = myActiveHelps.length >= MAX_ACTIVE_TICKETS;
+  const atHelperCapacity = myActiveHelps.length >= helperCapacity;
+
+  const syncRequestFromTicket = (poolTicketId: string, updater: (r: MyRequest) => MyRequest) => {
+    setMyRequests((prev) =>
+      prev.map((r) => (r.poolTicketId === poolTicketId ? updater(r) : r))
+    );
+    setJustCreated((prev) =>
+      prev?.poolTicketId === poolTicketId ? updater(prev) : prev
+    );
+  };
 
   const handleProceed = (ctx: ProceedContext) => {
     setProblem(ctx.problem);
     setMatchTags(ctx.tags);
     setFocusTopic(ctx.topic);
+    setComplexity(ctx.complexity);
     setStage("availability");
   };
 
@@ -127,7 +174,8 @@ export default function Home() {
       detail: problem,
       tags: matchTags,
       urgency: choice.urgency,
-      spot: choice.spot,
+      complexity,
+      askerSlots: choice.slots,
       askerName: currentUser.name,
       askerRole: currentUser.role,
       anonymousLabel: `Asker #${askerNumber}`,
@@ -143,7 +191,8 @@ export default function Home() {
       detail: problem,
       tags: matchTags,
       urgency: choice.urgency,
-      spot: choice.spot,
+      complexity,
+      askerSlots: choice.slots,
       status: "In pool",
       createdAgo: "Just now",
     };
@@ -153,58 +202,40 @@ export default function Home() {
     setJustCreated(request);
     setStage("ticket-created");
 
-    // Simulate a helper claiming from the pool (demo has no second user).
+    // Demo: simulated helper claims, then proposes a meeting.
     setTimeout(() => {
+      const claimed = {
+        status: "claimed" as const,
+        claimedBy: simulatedPoolHelper.id,
+        helperName: simulatedPoolHelper.name,
+        helperRole: simulatedPoolHelper.role,
+      };
       setPoolTickets((prev) =>
-        prev.map((t) =>
-          t.id === poolId
-            ? {
-                ...t,
-                status: "claimed",
-                claimedBy: simulatedPoolHelper.id,
-                helperName: simulatedPoolHelper.name,
-                helperRole: simulatedPoolHelper.role,
-              }
-            : t
-        )
+        prev.map((t) => (t.id === poolId ? { ...t, ...claimed } : t))
       );
-      setMyRequests((prev) =>
-        prev.map((r) =>
-          r.poolTicketId === poolId
-            ? {
-                ...r,
-                status: "Claimed",
-                helperName: simulatedPoolHelper.name,
-                helperRole: simulatedPoolHelper.role,
-              }
-            : r
-        )
-      );
-      setJustCreated((prev) =>
-        prev?.poolTicketId === poolId
-          ? {
-              ...prev,
-              status: "Claimed",
-              helperName: simulatedPoolHelper.name,
-              helperRole: simulatedPoolHelper.role,
-            }
-          : prev
-      );
+      syncRequestFromTicket(poolId, (r) => ({
+        ...r,
+        status: "Claimed",
+        helperName: simulatedPoolHelper.name,
+        helperRole: simulatedPoolHelper.role,
+      }));
 
       setTimeout(() => {
+        const proposal: MeetingProposal = {
+          spot: "online",
+          slotId: choice.slots[0] ?? "s2",
+          note: "Happy to help — Teams works best for me.",
+        };
         setPoolTickets((prev) =>
           prev.map((t) =>
-            t.id === poolId ? { ...t, status: "ready" } : t
+            t.id === poolId ? applyProposal({ ...t, ...claimed }, proposal) : t
           )
         );
-        setMyRequests((prev) =>
-          prev.map((r) =>
-            r.poolTicketId === poolId ? { ...r, status: "Ready" } : r
-          )
-        );
-        setJustCreated((prev) =>
-          prev?.poolTicketId === poolId ? { ...prev, status: "Ready" } : prev
-        );
+        syncRequestFromTicket(poolId, (r) => ({
+          ...r,
+          status: "Awaiting OK",
+          proposal,
+        }));
       }, 1500);
     }, 2500);
   };
@@ -212,33 +243,44 @@ export default function Home() {
   const handleClaimPoolTicket = (ticket: PoolTicket) => {
     if (atHelperCapacity) return;
 
+    const claimed: PoolTicket = {
+      ...ticket,
+      status: "claimed",
+      claimedBy: currentUser.id,
+      helperName: currentUser.name,
+      helperRole: currentUser.role,
+    };
+    setPoolTickets((prev) =>
+      prev.map((t) => (t.id === ticket.id ? claimed : t))
+    );
+    setSelectedPoolTicket(claimed);
+    setStage("helper-propose");
+  };
+
+  const handleSendProposal = (proposal: MeetingProposal) => {
+    if (!selectedPoolTicket) return;
+    const id = selectedPoolTicket.id;
+
     setPoolTickets((prev) =>
       prev.map((t) =>
-        t.id === ticket.id
-          ? {
-              ...t,
-              status: "claimed",
-              claimedBy: currentUser.id,
-              helperName: currentUser.name,
-              helperRole: currentUser.role,
-            }
-          : t
+        t.id === id ? applyProposal(t, proposal) : t
       )
     );
     setSelectedPoolTicket(null);
     setStage("filter");
+  };
 
-    setTimeout(() => {
-      setPoolTickets((prev) =>
-        prev.map((t) =>
-          t.id === ticket.id ? { ...t, status: "ready" } : t
-        )
-      );
-    }, 1500);
+  const handleAcceptProposal = (request: MyRequest) => {
+    setPoolTickets((prev) =>
+      prev.map((t) =>
+        t.id === request.poolTicketId ? acceptProposalOnTicket(t) : t
+      )
+    );
+    syncRequestFromTicket(request.poolTicketId, acceptProposalOnRequest);
   };
 
   const handleOpenMyRequestChat = (request: MyRequest) => {
-    if (request.status !== "Ready" || !request.helperName) return;
+    if (request.status !== "Ready" || !request.helperName || !request.agreedSpot) return;
     setSession({
       peer: helperPeerForLearning(
         request.helperName,
@@ -247,19 +289,19 @@ export default function Home() {
       ),
       mode: "learning",
       problem: request.detail,
-      spot: request.spot,
+      spot: request.agreedSpot,
       myRequestId: request.id,
       poolTicketId: request.poolTicketId,
     });
   };
 
   const handleOpenHelpingChat = (ticket: PoolTicket) => {
-    if (ticket.status !== "ready") return;
+    if (ticket.status !== "ready" || !ticket.agreedSpot) return;
     setSession({
       peer: poolTicketToPeer(ticket),
       mode: "teaching",
       problem: ticket.detail,
-      spot: ticket.spot,
+      spot: ticket.agreedSpot,
       poolTicketId: ticket.id,
     });
   };
@@ -292,6 +334,7 @@ export default function Home() {
     setProblem(currentUser.currentProblem);
     setMatchTags([]);
     setFocusTopic(undefined);
+    setComplexity("Specific");
     setPoolTickets(createInitialPoolTickets());
     setSelectedPoolTicket(null);
     setMyRequests([]);
@@ -300,6 +343,7 @@ export default function Home() {
     setRecentlyEarned(null);
     setSession(null);
     setCelebrate(null);
+    setHelperCapacity(2);
     setResetKey((k) => k + 1);
   };
 
@@ -330,8 +374,18 @@ export default function Home() {
               </div>
             </div>
 
-            <MyRequestsStrip requests={myRequests} onChat={handleOpenMyRequestChat} />
-
+            <TeamsIntegrationBanner />
+            <HelperMotivationPanel />
+            <HelperCapacityControl
+              capacity={helperCapacity}
+              activeHelping={myActiveHelps.length}
+              onChange={setHelperCapacity}
+            />
+            <MyRequestsStrip
+              requests={myRequests}
+              onChat={handleOpenMyRequestChat}
+              onAcceptProposal={handleAcceptProposal}
+            />
             <TicketPoolStrip
               tickets={openPoolTickets}
               onSelect={(t) => {
@@ -339,15 +393,17 @@ export default function Home() {
                 setStage("pool-ticket");
               }}
             />
-
             <MyHelpingStrip
               tickets={myActiveHelps}
               onChat={handleOpenHelpingChat}
+              onPropose={(t) => {
+                setSelectedPoolTicket(t);
+                setStage("helper-propose");
+              }}
             />
-
             {atHelperCapacity && (
               <p className="text-center text-xs text-amber-600">
-                You&apos;re at your helping limit ({MAX_ACTIVE_TICKETS}). New pool tickets
+                You&apos;re at your helping limit ({helperCapacity}). New pool tickets
                 are visible but paused until a slot opens.
               </p>
             )}
@@ -361,6 +417,7 @@ export default function Home() {
               setJustCreated(null);
               setStage("filter");
             }}
+            onAcceptProposal={handleAcceptProposal}
           />
         )}
 
@@ -373,6 +430,17 @@ export default function Home() {
             }}
             onClaim={handleClaimPoolTicket}
             atCapacity={atHelperCapacity}
+          />
+        )}
+
+        {stage === "helper-propose" && selectedPoolTicket && (
+          <HelperProposalStep
+            ticket={selectedPoolTicket}
+            onBack={() => {
+              setSelectedPoolTicket(null);
+              setStage("filter");
+            }}
+            onSubmit={handleSendProposal}
           />
         )}
 
@@ -390,20 +458,8 @@ export default function Home() {
               When works for <span className="text-brand-600">you?</span>
             </h1>
             <p className="mt-3 max-w-xl text-stone-500">
-              {focusTopic ? (
-                <>
-                  Focused topic:{" "}
-                  <span className="font-medium text-stone-700">{focusTopic}</span>.
-                  Set your availability — your ticket goes to the shared pool for
-                  helpers to claim.
-                </>
-              ) : (
-                <>
-                  Set your availability and urgency. Your question joins the ticket
-                  pool — helpers browse and pick what matches their skills. Nobody
-                  picks people upfront.
-                </>
-              )}
+              Pick your free times and urgency. Complexity is set by the AI — helpers
+              propose the meeting location after they claim your ticket.
             </p>
 
             {atRequestLimit && (
@@ -417,6 +473,7 @@ export default function Home() {
             <div className="mt-8">
               <AvailabilityStep
                 key={resetKey}
+                complexity={complexity}
                 onContinue={atRequestLimit ? () => {} : handlePostToPool}
               />
             </div>

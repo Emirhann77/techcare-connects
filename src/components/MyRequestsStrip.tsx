@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, MessageSquare, Send } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, MessageSquare, Send } from "lucide-react";
 import {
   displayHelperName,
   MAX_ACTIVE_TICKETS,
+  slotLabel,
+  spotLabel,
   type MyRequest,
   type QuestionUrgency,
 } from "@/lib/mockData";
@@ -12,6 +14,7 @@ import {
 interface MyRequestsStripProps {
   requests: MyRequest[];
   onChat: (request: MyRequest) => void;
+  onAcceptProposal: (request: MyRequest) => void;
 }
 
 const urgencyStyles: Record<QuestionUrgency, string> = {
@@ -23,10 +26,15 @@ const urgencyStyles: Record<QuestionUrgency, string> = {
 const statusLabel: Record<MyRequest["status"], string> = {
   "In pool": "Waiting in pool",
   Claimed: "Helper claimed",
+  "Awaiting OK": "Meeting proposed",
   Ready: "Ready to chat",
 };
 
-export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripProps) {
+export default function MyRequestsStrip({
+  requests,
+  onChat,
+  onAcceptProposal,
+}: MyRequestsStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollBy = (dir: 1 | -1) => {
@@ -88,10 +96,17 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
               <p className="text-xs text-stone-500">
                 {r.status === "In pool"
                   ? "In the shared pool · waiting for a helper"
-                  : displayHelperName(r)
-                    ? `Helper: ${displayHelperName(r)}${r.helperRole ? ` · ${r.helperRole}` : ""}`
-                    : "A helper is reviewing your ticket"}
+                  : r.status === "Awaiting OK" && r.proposal
+                    ? `${displayHelperName(r)} proposes ${spotLabel(r.proposal.spot)} · ${slotLabel(r.proposal.slotId)}`
+                    : displayHelperName(r)
+                      ? `Helper: ${displayHelperName(r)}${r.helperRole ? ` · ${r.helperRole}` : ""}`
+                      : "A helper is reviewing your ticket"}
               </p>
+              {r.status === "Awaiting OK" && r.proposal?.note && (
+                <p className="text-[11px] italic text-stone-400">
+                  &ldquo;{r.proposal.note}&rdquo;
+                </p>
+              )}
               <span
                 className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                   r.status === "Ready"
@@ -101,18 +116,28 @@ export default function MyRequestsStrip({ requests, onChat }: MyRequestsStripPro
               >
                 {statusLabel[r.status]}
               </span>
-              <button
-                onClick={() => r.status === "Ready" && onChat(r)}
-                disabled={r.status !== "Ready"}
-                className={`mt-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  r.status === "Ready"
-                    ? "bg-brand-600 text-white hover:bg-brand-700 active:scale-95"
-                    : "cursor-not-allowed bg-stone-100 text-stone-400"
-                }`}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                {r.status === "Ready" ? "Open chat" : "Waiting for helper"}
-              </button>
+              {r.status === "Awaiting OK" ? (
+                <button
+                  onClick={() => onAcceptProposal(r)}
+                  className="mt-1 flex items-center justify-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 active:scale-95"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Accept meeting
+                </button>
+              ) : (
+                <button
+                  onClick={() => r.status === "Ready" && onChat(r)}
+                  disabled={r.status !== "Ready"}
+                  className={`mt-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                    r.status === "Ready"
+                      ? "bg-brand-600 text-white hover:bg-brand-700 active:scale-95"
+                      : "cursor-not-allowed bg-stone-100 text-stone-400"
+                  }`}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {r.status === "Ready" ? "Open chat" : "Waiting for helper"}
+                </button>
+              )}
             </div>
           ))}
         </div>

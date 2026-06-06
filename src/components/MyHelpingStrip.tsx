@@ -1,10 +1,18 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, HeartHandshake, MessageSquare } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  HeartHandshake,
+  MessageSquare,
+} from "lucide-react";
 import {
   displayAskerName,
   MAX_ACTIVE_TICKETS,
+  slotLabel,
+  spotLabel,
   type PoolTicket,
   type QuestionUrgency,
 } from "@/lib/mockData";
@@ -12,6 +20,7 @@ import {
 interface MyHelpingStripProps {
   tickets: PoolTicket[];
   onChat: (ticket: PoolTicket) => void;
+  onPropose: (ticket: PoolTicket) => void;
 }
 
 const urgencyStyles: Record<QuestionUrgency, string> = {
@@ -20,7 +29,11 @@ const urgencyStyles: Record<QuestionUrgency, string> = {
   "Can wait": "bg-stone-100 text-stone-500",
 };
 
-export default function MyHelpingStrip({ tickets, onChat }: MyHelpingStripProps) {
+export default function MyHelpingStrip({
+  tickets,
+  onChat,
+  onPropose,
+}: MyHelpingStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollBy = (dir: 1 | -1) => {
@@ -77,29 +90,50 @@ export default function MyHelpingStrip({ tickets, onChat }: MyHelpingStripProps)
             <p className="font-serif text-base leading-snug text-stone-900">{t.title}</p>
             <p className="text-xs text-stone-500">
               Helping {displayAskerName(t)}
-              {t.status === "open" ? " · identity hidden" : ` · ${t.askerRole}`}
+              {t.status !== "open" && t.askerRole ? ` · ${t.askerRole}` : ""}
             </p>
+            {t.status === "negotiating" && t.proposal && (
+              <p className="text-[11px] text-amber-700">
+                Waiting for OK: {spotLabel(t.proposal.spot)} · {slotLabel(t.proposal.slotId)}
+              </p>
+            )}
             <span
               className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                 t.status === "ready"
                   ? "bg-emerald-100 text-emerald-700"
-                  : "bg-amber-100 text-amber-700"
+                  : t.status === "negotiating"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-stone-100 text-stone-600"
               }`}
             >
-              {t.status === "ready" ? "Ready to chat" : "Claimed"}
+              {t.status === "ready"
+                ? "Ready to chat"
+                : t.status === "negotiating"
+                  ? "Awaiting helpee"
+                  : "Set meeting"}
             </span>
-            <button
-              onClick={() => t.status === "ready" && onChat(t)}
-              disabled={t.status !== "ready"}
-              className={`mt-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                t.status === "ready"
-                  ? "bg-brand-600 text-white hover:bg-brand-700 active:scale-95"
-                  : "cursor-not-allowed bg-stone-100 text-stone-400"
-              }`}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              {t.status === "ready" ? "Open chat" : "Starting session…"}
-            </button>
+            {t.status === "claimed" ? (
+              <button
+                onClick={() => onPropose(t)}
+                className="mt-1 flex items-center justify-center gap-1.5 rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 active:scale-95"
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                Set time &amp; place
+              </button>
+            ) : (
+              <button
+                onClick={() => t.status === "ready" && onChat(t)}
+                disabled={t.status !== "ready"}
+                className={`mt-1 flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                  t.status === "ready"
+                    ? "bg-brand-600 text-white hover:bg-brand-700 active:scale-95"
+                    : "cursor-not-allowed bg-stone-100 text-stone-400"
+                }`}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                {t.status === "ready" ? "Open chat" : "Waiting for helpee…"}
+              </button>
+            )}
           </div>
         ))}
       </div>

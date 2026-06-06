@@ -1,30 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CalendarDays, Check, MapPin, Users, Zap } from "lucide-react";
+import { ArrowRight, Bot, CalendarDays, Check, Zap } from "lucide-react";
 import {
-  meetingSpots,
+  complexityLabels,
   questionUrgencyOptions,
   timeSlots,
+  type QuestionComplexity,
   type QuestionUrgency,
 } from "@/lib/mockData";
 
 export interface AvailabilityChoice {
   slots: string[];
-  spot: string;
   urgency: QuestionUrgency;
-  okayToWait: boolean;
 }
 
 interface AvailabilityStepProps {
+  complexity: QuestionComplexity;
   onContinue: (choice: AvailabilityChoice) => void;
 }
 
-export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) {
+export default function AvailabilityStep({
+  complexity,
+  onContinue,
+}: AvailabilityStepProps) {
   const [slots, setSlots] = useState<string[]>([]);
-  const [spot, setSpot] = useState<string>(meetingSpots[0].id);
   const [urgency, setUrgency] = useState<QuestionUrgency>("Normal");
-  const [okayToWait, setOkayToWait] = useState(false);
 
   const toggleSlot = (id: string) => {
     setSlots((prev) =>
@@ -32,12 +33,23 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
     );
   };
 
+  const complexityInfo = complexityLabels[complexity];
+
   return (
     <div className="mx-auto w-full max-w-2xl animate-fade-in">
       <div className="rounded-3xl border border-paper-300 bg-white p-6 shadow-sm sm:p-7">
-        <p className="uppercase-label flex items-center gap-2 text-stone-400">
+        <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3">
+          <p className="uppercase-label flex items-center gap-2 text-brand-700">
+            <Bot className="h-4 w-4" />
+            AI set complexity
+          </p>
+          <p className="mt-1 font-serif text-lg text-stone-900">{complexityInfo.label}</p>
+          <p className="text-xs text-stone-500">{complexityInfo.hint}</p>
+        </div>
+
+        <p className="uppercase-label mt-6 flex items-center gap-2 text-stone-400">
           <CalendarDays className="h-4 w-4" />
-          Choose one or more
+          When are you free?
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -106,50 +118,8 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
           })}
         </div>
 
-        <p className="uppercase-label mt-6 flex items-center gap-2 text-stone-400">
-          <MapPin className="h-4 w-4" />
-          Where to meet
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {meetingSpots.map((m) => {
-            const selected = spot === m.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => setSpot(m.id)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                  selected
-                    ? "border-stone-900 bg-stone-900 text-white"
-                    : "border-paper-300 text-stone-600 hover:border-stone-300"
-                }`}
-              >
-                {m.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <label className="mt-6 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={okayToWait}
-            onChange={(e) => setOkayToWait(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-brand-600"
-          />
-          <span className="text-sm">
-            <span className="flex items-center gap-1.5 font-medium text-stone-800">
-              <Users className="h-4 w-4 text-stone-400" />
-              I&apos;m okay to wait for busy experts
-            </span>
-            <span className="text-stone-500">
-              Also show people who are Busy or Away — the best person may not be free
-              right now.
-            </span>
-          </span>
-        </label>
-
         <button
-          onClick={() => onContinue({ slots, spot, urgency, okayToWait })}
+          onClick={() => onContinue({ slots, urgency })}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.99]"
         >
           Post to ticket pool
@@ -157,8 +127,8 @@ export default function AvailabilityStep({ onContinue }: AvailabilityStepProps) 
         </button>
         <p className="mt-2 text-center text-xs text-stone-400">
           {slots.length > 0
-            ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected`
-            : "Tip: pick at least one slot so helpers know when you're free"}
+            ? `${slots.length} time slot${slots.length > 1 ? "s" : ""} selected · location set by helper after claim`
+            : "Tip: pick at least one slot — helpers propose the meeting place"}
         </p>
       </div>
     </div>
