@@ -94,7 +94,9 @@ export default function MyHelpingStrip({
             </p>
             {t.status === "negotiating" && t.proposal && (
               <p className="text-[11px] text-amber-700">
-                Waiting for OK: {spotLabel(t.proposal.spot)} · {slotLabel(t.proposal.slotId)}
+                {t.proposal.from === "helpee"
+                  ? `They suggested: ${spotLabel(t.proposal.spot)} · ${slotLabel(t.proposal.slotId)}`
+                  : `Waiting for OK: ${spotLabel(t.proposal.spot)} · ${slotLabel(t.proposal.slotId)}`}
               </p>
             )}
             <span

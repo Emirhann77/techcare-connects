@@ -6,7 +6,7 @@ import BackButton from "@/components/BackButton";
 import SectionDivider from "@/components/SectionDivider";
 import AiFilter, { type ProceedContext } from "@/components/AiFilter";
 import AvailabilityStep, { type AvailabilityChoice } from "@/components/AvailabilityStep";
-import ChatModal from "@/components/ChatModal";
+import ChatWorkspace, { type ChatThread } from "@/components/ChatWorkspace";
 import CelebrationModal from "@/components/CelebrationModal";
 import TicketPoolStrip from "@/components/TicketPoolStrip";
 import MyHelpingStrip from "@/components/MyHelpingStrip";
@@ -19,6 +19,8 @@ import HelperMotivationPanel from "@/components/HelperMotivationPanel";
 import HelperCapacityControl from "@/components/HelperCapacityControl";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import OnboardingScreen from "@/components/OnboardingScreen";
+import HomeHubScreen from "@/components/HomeHubScreen";
+import ModeSwitchBar from "@/components/ModeSwitchBar";
 import CapacityNotificationBanner from "@/components/CapacityNotificationBanner";
 import {
   createInitialPoolTickets,
@@ -36,20 +38,19 @@ import {
 type Stage =
   | "welcome"
   | "onboarding"
-  | "filter"
+  | "hub"
+  | "getting-help"
+  | "helping"
   | "availability"
   | "ticket-created"
   | "pool-ticket"
-  | "helper-propose";
+  | "helper-propose"
+  | "chat";
 type Mode = "learning" | "teaching";
 
 interface Session {
-  peer: Peer;
   mode: Mode;
-  problem: string;
-  spot: string;
-  myRequestId?: string;
-  poolTicketId?: string;
+  activeThreadId: string;
 }
 
 const poolTicketToPeer = (t: PoolTicket): Peer => ({
@@ -152,6 +153,39 @@ export default function Home() {
 
   const atHelperCapacity = myActiveHelps.length >= helperCapacity;
 
+  const learningChatThreads = useMemo((): ChatThread[] => {
+    return myRequests
+      .filter(
+        (r) => r.status === "Ready" && r.helperName && r.agreedSpot
+      )
+      .map((r) => ({
+        id: r.id,
+        title: r.title,
+        peer: helperPeerForLearning(
+          r.helperName!,
+          r.helperRole ?? "Matched helper",
+          r.tags
+        ),
+        problem: r.detail,
+        spot: r.agreedSpot!,
+        poolTicketId: r.poolTicketId,
+        myRequestId: r.id,
+      }));
+  }, [myRequests]);
+
+  const teachingChatThreads = useMemo((): ChatThread[] => {
+    return myActiveHelps
+      .filter((t) => t.status === "ready" && t.agreedSpot)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        peer: poolTicketToPeer(t),
+        problem: t.detail,
+        spot: t.agreedSpot!,
+        poolTicketId: t.id,
+      }));
+  }, [myActiveHelps]);
+
   const syncRequestFromTicket = (poolTicketId: string, updater: (r: MyRequest) => MyRequest) => {
     setMyRequests((prev) =>
       prev.map((r) => (r.poolTicketId === poolTicketId ? updater(r) : r))
@@ -242,6 +276,7 @@ export default function Home() {
           spot: "online",
           slotId: choice.slots[0] ?? "s2",
           note: "Happy to help — Teams works best for me.",
+          from: "helper",
         };
         setPoolTickets((prev) =>
           prev.map((t) =>
@@ -295,7 +330,7 @@ export default function Home() {
       prev.map((t) => (t.id === id ? applyProposal(t, proposal) : t))
     );
     setSelectedPoolTicket(null);
-    setStage("filter");
+    setStage("helping");
 
     // Demo has no second user — auto-accept when we proposed to a colleague's ticket.
     if (isHelpingSomeoneElse) {
@@ -312,35 +347,70 @@ export default function Home() {
     syncRequestFromTicket(request.poolTicketId, acceptProposalOnRequest);
   };
 
+  const handleCounterProposal = (
+    request: MyRequest,
+    proposal: MeetingProposal
+  ) => {
+    const counter = { ...proposal, from: "helpee" as const };
+    setPoolTickets((prev) =>
+      prev.map((t) =>
+        t.id === request.poolTicketId
+          ? { ...t, status: "negotiating", proposal: counter }
+          : t
+      )
+    );
+    syncRequestFromTicket(request.poolTicketId, (r) => ({
+      ...r,
+      status: "Awaiting helper",
+      proposal: counter,
+    }));
+
+    setTimeout(() => {
+      setPoolTickets((prev) =>
+        prev.map((t) =>
+          t.id === request.poolTicketId
+            ? acceptProposalOnTicket({ ...t, proposal: counter })
+            : t
+        )
+      );
+      syncRequestFromTicket(request.poolTicketId, acceptProposalOnRequest);
+    }, 2500);
+  };
+
+  const handleDeclineProposal = (request: MyRequest) => {
+    setPoolTickets((prev) =>
+      prev.filter((t) => t.id !== request.poolTicketId)
+    );
+    setMyRequests((prev) => prev.filter((r) => r.id !== request.id));
+    if (justCreated?.id === request.id) {
+      setJustCreated(null);
+      setStage("getting-help");
+    }
+  };
+
   const handleOpenMyRequestChat = (request: MyRequest) => {
     if (request.status !== "Ready" || !request.helperName || !request.agreedSpot) return;
-    setSession({
-      peer: helperPeerForLearning(
-        request.helperName,
-        request.helperRole ?? "Matched helper",
-        request.tags
-      ),
-      mode: "learning",
-      problem: request.detail,
-      spot: request.agreedSpot,
-      myRequestId: request.id,
-      poolTicketId: request.poolTicketId,
-    });
+    setSession({ mode: "learning", activeThreadId: request.id });
+    setStage("chat");
   };
 
   const handleOpenHelpingChat = (ticket: PoolTicket) => {
     if (ticket.status !== "ready" || !ticket.agreedSpot) return;
-    setSession({
-      peer: poolTicketToPeer(ticket),
-      mode: "teaching",
-      problem: ticket.detail,
-      spot: ticket.agreedSpot,
-      poolTicketId: ticket.id,
-    });
+    setSession({ mode: "teaching", activeThreadId: ticket.id });
+    setStage("chat");
   };
 
-  const handleResolve = (peer: Peer) => {
+  const handleCloseChat = () => {
     const mode = session?.mode ?? "learning";
+    setSession(null);
+    setStage(mode === "teaching" ? "helping" : "getting-help");
+  };
+
+  const handleResolve = (threadId: string, peer: Peer) => {
+    const mode = session?.mode ?? "learning";
+    const threads =
+      mode === "teaching" ? teachingChatThreads : learningChatThreads;
+    const thread = threads.find((t) => t.id === threadId);
     const earned =
       mode === "teaching"
         ? gamificationRules.HELPER_POINTS
@@ -348,17 +418,24 @@ export default function Home() {
     setPoints((p) => p + earned);
     setRecentlyEarned(earned);
     setCelebrate({ peer, mode });
-    setSession(null);
 
-    if (session?.poolTicketId) {
+    if (thread?.poolTicketId) {
       setPoolTickets((prev) =>
-        prev.filter((t) => t.id !== session.poolTicketId)
+        prev.filter((t) => t.id !== thread.poolTicketId)
       );
     }
-    if (mode === "learning" && session?.myRequestId) {
+    if (mode === "learning" && thread?.myRequestId) {
       setMyRequests((prev) =>
-        prev.filter((r) => r.id !== session.myRequestId)
+        prev.filter((r) => r.id !== thread.myRequestId)
       );
+    }
+
+    const remaining = threads.filter((t) => t.id !== threadId);
+    if (remaining.length > 0 && session) {
+      setSession({ ...session, activeThreadId: remaining[0].id });
+    } else {
+      setSession(null);
+      setStage(mode === "teaching" ? "helping" : "getting-help");
     }
   };
 
@@ -399,23 +476,29 @@ export default function Home() {
         </div>
       </div>
       <TeamsIntegrationBanner />
-      <MyRequestsStrip
-        requests={myRequests}
-        onChat={handleOpenMyRequestChat}
-        onAcceptProposal={handleAcceptProposal}
-      />
     </>
   );
 
+  const hasActiveHelps = myActiveHelps.length > 0;
+
   const helpSection = (
     <>
-      <HelperMotivationPanel />
       <HelperCapacityControl
         capacity={helperCapacity}
         activeHelping={myActiveHelps.length}
         onChange={setHelperCapacity}
       />
       <CapacityNotificationBanner atCapacity={atHelperCapacity} />
+      {hasActiveHelps && (
+        <MyHelpingStrip
+          tickets={myActiveHelps}
+          onChat={handleOpenHelpingChat}
+          onPropose={(t) => {
+            setSelectedPoolTicket(t);
+            setStage("helper-propose");
+          }}
+        />
+      )}
       <TicketPoolStrip
         tickets={openPoolTickets}
         onSelect={(t) => {
@@ -423,14 +506,7 @@ export default function Home() {
           setStage("pool-ticket");
         }}
       />
-      <MyHelpingStrip
-        tickets={myActiveHelps}
-        onChat={handleOpenHelpingChat}
-        onPropose={(t) => {
-          setSelectedPoolTicket(t);
-          setStage("helper-propose");
-        }}
-      />
+      <HelperMotivationPanel />
     </>
   );
 
@@ -439,9 +515,12 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {stage === "welcome" ? (
-        <WelcomeScreen onContinue={() => setStage("onboarding")} />
+        <WelcomeScreen
+          onContinue={() => setStage("onboarding")}
+          onSkip={() => setStage("hub")}
+        />
       ) : (
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
+      <main className={`mx-auto px-4 py-6 sm:py-10 ${stage === "chat" ? "max-w-6xl" : "max-w-5xl"}`}>
         {showAppHeader && (
           <GamificationHeader
             userName={currentUser.name}
@@ -454,33 +533,76 @@ export default function Home() {
         {stage === "onboarding" && (
           <>
             <BackButton onClick={() => setStage("welcome")} />
-            <OnboardingScreen onContinue={() => setStage("filter")} />
+            <OnboardingScreen onContinue={() => setStage("hub")} />
           </>
         )}
 
-        {stage === "filter" && (
-          <section className="space-y-8 animate-fade-in">
+        {stage === "hub" && (
+          <>
             <BackButton onClick={() => setStage("onboarding")} />
-            <div className="space-y-5">{askSection}</div>
+            <HomeHubScreen
+              onSelect={(mode) =>
+                setStage(mode === "getting-help" ? "getting-help" : "helping")
+              }
+            />
+          </>
+        )}
+
+        {stage === "getting-help" && (
+          <section className="animate-fade-in">
+            <ModeSwitchBar
+              current="getting-help"
+              onSwitch={(mode) =>
+                setStage(mode === "getting-help" ? "getting-help" : "helping")
+              }
+              onBackToHub={() => setStage("hub")}
+            />
+            <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
+              <aside className="w-full shrink-0 lg:w-80 xl:w-96">
+                <MyRequestsStrip
+                  layout="column"
+                  requests={myRequests}
+                  onChat={handleOpenMyRequestChat}
+                  onAcceptProposal={handleAcceptProposal}
+                  onCounterProposal={handleCounterProposal}
+                  onDeclineProposal={handleDeclineProposal}
+                />
+              </aside>
+              <div className="min-w-0 flex-1 space-y-5">{askSection}</div>
+            </div>
+          </section>
+        )}
+
+        {stage === "helping" && (
+          <section className="animate-fade-in">
+            <ModeSwitchBar
+              current="helping"
+              onSwitch={(mode) =>
+                setStage(mode === "getting-help" ? "getting-help" : "helping")
+              }
+              onBackToHub={() => setStage("hub")}
+            />
             <SectionDivider
               title="Now it's your turn to help"
               accent="orange"
               centered
             />
-            <div className="space-y-5">{helpSection}</div>
+            <div className="mt-6 space-y-5">{helpSection}</div>
           </section>
         )}
 
         {stage === "ticket-created" && justCreated && (
           <>
-            <BackButton onClick={() => { setJustCreated(null); setStage("filter"); }} />
+            <BackButton onClick={() => { setJustCreated(null); setStage("getting-help"); }} />
             <TicketCreatedSuccess
             request={justCreated}
             onGoHome={() => {
               setJustCreated(null);
-              setStage("filter");
+              setStage("getting-help");
             }}
             onAcceptProposal={handleAcceptProposal}
+            onCounterProposal={handleCounterProposal}
+            onDeclineProposal={handleDeclineProposal}
           />
           </>
         )}
@@ -490,7 +612,7 @@ export default function Home() {
             ticket={selectedPoolTicket}
             onBack={() => {
               setSelectedPoolTicket(null);
-              setStage("filter");
+              setStage("helping");
             }}
             onClaim={handleClaimPoolTicket}
             atCapacity={atHelperCapacity}
@@ -502,7 +624,7 @@ export default function Home() {
             ticket={selectedPoolTicket}
             onBack={() => {
               setSelectedPoolTicket(null);
-              setStage("filter");
+              setStage("helping");
             }}
             onSubmit={handleSendProposal}
           />
@@ -510,7 +632,7 @@ export default function Home() {
 
         {stage === "availability" && (
           <section>
-            <BackButton onClick={() => setStage("filter")} />
+            <BackButton onClick={() => setStage("getting-help")} />
             <p className="uppercase-label text-stone-400">Stage 02 · Post to pool</p>
             <h1 className="mt-2 font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
               When works for <span className="text-brand-600">you?</span>
@@ -536,19 +658,32 @@ export default function Home() {
             </div>
           </section>
         )}
+        {stage === "chat" &&
+          session &&
+          (() => {
+            const threads =
+              session.mode === "teaching"
+                ? teachingChatThreads
+                : learningChatThreads;
+            if (threads.length === 0) return null;
+            const activeId = threads.some((t) => t.id === session.activeThreadId)
+              ? session.activeThreadId
+              : threads[0].id;
+            return (
+              <ChatWorkspace
+                threads={threads}
+                activeThreadId={activeId}
+                onSelectThread={(id) =>
+                  setSession((s) => (s ? { ...s, activeThreadId: id } : null))
+                }
+                userName={currentUser.name}
+                mode={session.mode}
+                onBack={handleCloseChat}
+                onResolve={handleResolve}
+              />
+            );
+          })()}
       </main>
-      )}
-
-      {session && (
-        <ChatModal
-          peer={session.peer}
-          userName={currentUser.name}
-          problem={session.problem}
-          spot={session.spot}
-          mode={session.mode}
-          onClose={() => setSession(null)}
-          onResolve={handleResolve}
-        />
       )}
 
       {celebrate && (

@@ -69,7 +69,7 @@ export const currentUser: CurrentUser = {
   role: "Branch Manager · 20 yrs at the bank",
   gamificationPoints: 12,
   currentProblem:
-    "How do I write a SQL query that joins three tables and still runs fast on our warehouse?",
+    "How do I join customers, orders, and products in one SQL query?",
 };
 
 export type TicketUrgency = "High" | "Normal" | "Low";
@@ -78,7 +78,7 @@ export type TicketUrgency = "High" | "Normal" | "Low";
 export type QuestionUrgency = "Urgent" | "Normal" | "Can wait";
 
 /** Set by the AI triage — helpee does not pick this manually. */
-export type QuestionComplexity = "Specific" | "Common" | "Broad";
+export type QuestionComplexity = "Specific" | "Common" | "Broad" | "Simple";
 
 export const complexityLabels: Record<
   QuestionComplexity,
@@ -87,12 +87,15 @@ export const complexityLabels: Record<
   Specific: { label: "Specific", hint: "Needs an internal expert" },
   Common: { label: "Common", hint: "Seen before — may still need a person" },
   Broad: { label: "Broad", hint: "AI focused the topic first" },
+  Simple: { label: "Simple", hint: "AI answers — no expert needed" },
 };
 
 export interface MeetingProposal {
   spot: string;
   slotId: string;
   note?: string;
+  /** Who sent this proposal — defaults to helper when omitted. */
+  from?: "helper" | "helpee";
 }
 
 export function slotLabel(id: string): string {
@@ -177,7 +180,7 @@ export interface MyRequest {
   agreedSpot?: string;
   agreedSlotId?: string;
   proposal?: MeetingProposal;
-  status: "In pool" | "Claimed" | "Awaiting OK" | "Ready";
+  status: "In pool" | "Claimed" | "Awaiting OK" | "Awaiting helper" | "Ready";
   /** Real helper name — revealed once someone claims the ticket. */
   helperName?: string;
   helperRole?: string;

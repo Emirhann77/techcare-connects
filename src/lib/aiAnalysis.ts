@@ -15,6 +15,13 @@ export interface PastMessage {
 
 export type QueryAnalysis =
   | {
+      kind: "simple";
+      tags: string[];
+      title: string;
+      answer: string;
+      resources: Resource[];
+    }
+  | {
       kind: "expert";
       tags: string[];
       resources: Resource[];
@@ -35,6 +42,56 @@ export type QueryAnalysis =
       pastConversation: PastMessage[];
       resources: Resource[];
     };
+
+const simpleEntries: Array<{
+  keywords: string[];
+  title: string;
+  answer: string;
+}> = [
+  {
+    keywords: [
+      "first 10",
+      "first ten",
+      "limit 10",
+      "top 10",
+      "only 10 rows",
+      "first few rows",
+    ],
+    title: "Show only the first 10 rows",
+    answer:
+      "Add LIMIT 10 at the end of your query — for example: SELECT * FROM customers LIMIT 10. If you care which 10 rows you get, add ORDER BY first (e.g. ORDER BY created_at DESC LIMIT 10). On SQL Server use TOP 10 instead of LIMIT.",
+  },
+  {
+    keywords: ["order by", "sort results", "sort rows", "ascending", "descending"],
+    title: "Sort results with ORDER BY",
+    answer:
+      "ORDER BY goes at the end of your query and controls row order. Example: SELECT name, amount FROM sales ORDER BY amount DESC. Use ASC for smallest/oldest first, DESC for largest/newest first. You can sort by multiple columns: ORDER BY region ASC, amount DESC.",
+  },
+  {
+    keywords: ["select *", "select star", "what columns"],
+    title: "What SELECT * does",
+    answer:
+      "SELECT * returns every column from the table. It is fine for a quick look, but for reports list only the columns you need — it is faster, easier to read, and less likely to break if someone adds a column later.",
+  },
+  {
+    keywords: ["distinct", "duplicate rows", "unique values", "remove duplicates"],
+    title: "Remove duplicate rows with DISTINCT",
+    answer:
+      "DISTINCT keeps one copy of each unique value. Example: SELECT DISTINCT country FROM customers. Use it when you only need unique values, not every row. If duplicates come from joining tables, fix the JOIN instead of relying on DISTINCT alone.",
+  },
+  {
+    keywords: ["where vs having", "difference between where and having"],
+    title: "WHERE vs HAVING",
+    answer:
+      "WHERE filters rows before grouping. HAVING filters groups after GROUP BY. Rule of thumb: filter individual rows with WHERE; filter aggregated results (like SUM > 1000) with HAVING.",
+  },
+  {
+    keywords: ["count(", "count rows", "how many rows"],
+    title: "Count rows in SQL",
+    answer:
+      "COUNT(*) counts every row. COUNT(column_name) counts rows where that column is not NULL. Example: SELECT COUNT(*) FROM orders WHERE status = 'open'. Use COUNT(DISTINCT customer_id) when you need unique customers.",
+  },
+];
 
 const faqEntries: Array<{
   id: string;
@@ -59,13 +116,13 @@ const faqEntries: Array<{
   {
     id: "groupby",
     keywords: ["group by", "aggregate", "aggregation", "having"],
-    title: "GROUP BY column rules",
+    title: "GROUP BY — which columns go where?",
     askCount: 14,
     pastConversation: [
-      { from: "asker", text: "SQL says my SELECT doesn't match GROUP BY." },
+      { from: "asker", text: "My GROUP BY query keeps failing." },
       {
         from: "expert",
-        text: "Every non-aggregated column in SELECT must be in GROUP BY. Wrap the rest in SUM/MAX or drop them.",
+        text: "Every column in SELECT must either be in GROUP BY or wrapped in SUM/COUNT/MAX. Example: SELECT region, SUM(amount) FROM sales GROUP BY region.",
       },
     ],
   },
@@ -84,6 +141,31 @@ const broadSignals = [
   "all sql",
   "end to end",
   "end-to-end",
+];
+
+const expertSignals = [
+  "three tables",
+  "join three",
+  "warehouse",
+  "runs fast",
+  "optimize",
+  "performance",
+  "slow query",
+  "window function",
+  "subquery",
+  "our data",
+  "internal",
+];
+
+const simpleStarters = [
+  "what is ",
+  "what does ",
+  "what's ",
+  "explain ",
+  "how do i show",
+  "how do i get",
+  "how do i list",
+  "how do i sort",
 ];
 
 const paperLibrary: Record<string, Resource> = {
@@ -144,11 +226,11 @@ export function resourcesForTags(tags: string[]): Resource[] {
 function buildTopic(tags: string[]): { summaryTopic: string; subtopics: string[] } {
   const lead = tags[0] ?? "SQL";
   return {
-    summaryTopic: `${lead} fundamentals for analysts`,
+    summaryTopic: `${lead} basics for day-to-day work`,
     subtopics: [
-      `Core ${lead} patterns we use on real data`,
-      "Common mistakes on our warehouse tables",
-      "One query you can reuse this week",
+      `Core ${lead} patterns on our tables`,
+      "One example query you can copy",
+      "When to ask a colleague instead",
     ],
   };
 }
@@ -158,11 +240,11 @@ function buildTopicOptions(
 ): { summaryTopic: string; subtopics: string[] }[] {
   const perTag = tags.map((t) => buildTopic([t, ...tags.filter((x) => x !== t)]));
   const fallback = {
-    summaryTopic: "A 30-minute SQL starter for analysts",
+    summaryTopic: "SQL starter — reads, filters, and joins",
     subtopics: [
-      "SELECT, WHERE, and JOIN basics",
-      "When to use a subquery vs a JOIN",
-      "Who to ask when a query won't run",
+      "SELECT and WHERE in plain English",
+      "When to use a JOIN vs a filter",
+      "Who to ask when a query errors",
     ],
   };
   const all = [...perTag, fallback];
@@ -171,9 +253,35 @@ function buildTopicOptions(
   ).slice(0, 4);
 }
 
+function matchSimple(text: string): (typeof simpleEntries)[0] | null {
+  return (
+    simpleEntries.find((entry) =>
+      entry.keywords.some((k) => text.includes(k))
+    ) ?? null
+  );
+}
+
+function genericSimpleAnswer(query: string): { title: string; answer: string } {
+  return {
+    title: "Quick SQL answer",
+    answer: `For "${query.trim()}": start with a basic SELECT on one table, add WHERE to filter, and ORDER BY if you need sorting. If you are joining tables or tuning performance on our warehouse, that is a Specific question — use the expert path instead.`,
+  };
+}
+
 export function analyzeQuery(query: string): QueryAnalysis {
   const text = query.toLowerCase();
   const tags = extractTagsFromQuery(query, mockPeers);
+
+  const simple = matchSimple(text);
+  if (simple) {
+    return {
+      kind: "simple",
+      tags,
+      title: simple.title,
+      answer: simple.answer,
+      resources: resourcesForTags(tags),
+    };
+  }
 
   const faq = faqEntries.find((f) => f.keywords.some((k) => text.includes(k)));
   if (faq) {
@@ -201,6 +309,22 @@ export function analyzeQuery(query: string): QueryAnalysis {
     };
   }
 
+  const looksSimple =
+    !expertSignals.some((s) => text.includes(s)) &&
+    simpleStarters.some((s) => text.includes(s)) &&
+    query.trim().length < 120;
+
+  if (looksSimple) {
+    const generic = genericSimpleAnswer(query);
+    return {
+      kind: "simple",
+      tags,
+      title: generic.title,
+      answer: generic.answer,
+      resources: resourcesForTags(tags),
+    };
+  }
+
   return {
     kind: "expert",
     tags,
@@ -219,18 +343,18 @@ export function validateCustomTopic(topic: string): {
   if (words.length < 2) {
     return {
       ok: false,
-      message: "Too vague — add a bit more detail so we can match the right helper.",
+      message: "Too vague — name one SQL topic (e.g. JOINs on customer tables).",
     };
   }
   if (broadSignals.some((s) => lower.includes(s)) || /\ball\b/.test(lower)) {
     return {
       ok: false,
-      message: "Still too broad — narrow it to one specific SQL area or task.",
+      message: "Still too broad — pick one focused SQL topic.",
     };
   }
   return {
     ok: true,
-    message: "Looks focused enough — routing you to the right helpers.",
+    message: "Looks focused — we can post this to the pool.",
   };
 }
 
@@ -244,18 +368,18 @@ export function getBroadFollowUps(_query: string): FollowUpQuestion[] {
   return [
     {
       id: "area",
-      question: "Which SQL area do you need most right now?",
-      options: ["JOINs & relationships", "Aggregations & GROUP BY", "Window functions"],
+      question: "What do you want to learn first?",
+      options: ["JOINs (combine tables)", "Totals with GROUP BY", "Rankings with window functions"],
     },
     {
       id: "scope",
-      question: "What kind of data are you working with?",
-      options: ["Customer tables", "Sales & revenue", "Internal ops data"],
+      question: "Which data do you work with most?",
+      options: ["Customers", "Sales & revenue", "Branch / ops data"],
     },
     {
       id: "tried",
-      question: "What have you already tried?",
-      options: ["Stack Overflow / docs", "Asked a colleague", "Nothing yet"],
+      question: "What have you tried so far?",
+      options: ["Docs / Google", "Asked a colleague", "Nothing yet"],
     },
   ];
 }
@@ -263,14 +387,18 @@ export function getBroadFollowUps(_query: string): FollowUpQuestion[] {
 export const exampleQueries = [
   {
     label: "Specific",
-    text: "How do I write a SQL query that joins three tables and still runs fast on our warehouse?",
+    text: "How do I join customers, orders, and products in one SQL query?",
   },
   {
     label: "Common",
-    text: "My GROUP BY query keeps failing — which columns should go in SELECT vs GROUP BY?",
+    text: "My GROUP BY query fails — which columns belong in GROUP BY?",
   },
   {
     label: "Broad",
-    text: "Can someone teach me everything about SQL and our entire data warehouse from scratch?",
+    text: "I need to learn SQL from scratch for our data warehouse.",
+  },
+  {
+    label: "Simple",
+    text: "How do I show only the first 10 rows in SQL?",
   },
 ];

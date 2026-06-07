@@ -5,9 +5,10 @@ import ConnectIllustration from "./ConnectIllustration";
 
 interface WelcomeScreenProps {
   onContinue: () => void;
+  onSkip: () => void;
 }
 
-export default function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
+export default function WelcomeScreen({ onContinue, onSkip }: WelcomeScreenProps) {
   return (
     <section className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-6 py-12">
       <div className="pointer-events-none absolute -right-20 top-10 h-64 w-64 rounded-full bg-accent-pink/20 blur-3xl" />
@@ -42,6 +43,13 @@ export default function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
         >
           Enter
           <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onSkip}
+          className="mt-4 text-sm font-medium text-stone-400 transition hover:text-stone-600"
+        >
+          Skip
         </button>
       </div>
     </section>

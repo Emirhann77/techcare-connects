@@ -68,6 +68,12 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
             <div className="flex flex-wrap justify-end gap-1.5">
               {exampleQueries.map((ex) => {
                 const active = selectedExample === ex.label;
+                const activeClass =
+                  ex.label === "Simple"
+                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    : ex.label === "Common"
+                      ? "border-amber-600 bg-amber-600 text-white"
+                      : "border-brand-600 bg-brand-600 text-white";
                 return (
                   <button
                     key={ex.label}
@@ -79,7 +85,7 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
                     }}
                     className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                       active
-                        ? "border-brand-600 bg-brand-600 text-white"
+                        ? activeClass
                         : "border-paper-300 text-stone-500 hover:border-brand-300 hover:text-brand-700"
                     }`}
                   >
@@ -130,6 +136,12 @@ export default function AiFilter({ defaultProblem, onProceed }: AiFilterProps) {
 
       {phase === "verdict" && analysis && (
         <div className="mt-4 animate-fade-in">
+          {analysis.kind === "simple" && (
+            <SimpleVerdict
+              analysis={analysis}
+              onSelfServed={() => setPhase("self-served")}
+            />
+          )}
           {analysis.kind === "expert" && (
             <ExpertVerdict
               analysis={analysis}
@@ -197,10 +209,10 @@ function ExpertVerdict({
 }) {
   return (
     <VerdictShell tone="amber">
-      <p className="uppercase-label text-amber-700">Good specific question</p>
+      <p className="uppercase-label text-amber-700">Specific · needs an expert</p>
       <p className="mt-2 text-stone-700">
-        This is a focused SQL question — we&apos;ll forward it to a matching colleague
-        who&apos;s solved this on our actual data before.
+        This is a focused question about our data — we&apos;ll post it to the pool
+        and match you with a colleague who has solved it before.
       </p>
       <button
         onClick={onProceed}
@@ -263,8 +275,8 @@ function BroadVerdict({
           Let&apos;s be specific!
         </p>
         <p className="mt-2 text-stone-700">
-          That&apos;s a broad ask — answer a few quick questions so we can narrow it to
-          one SQL topic before posting to the pool.
+          That covers a lot — answer three quick questions so we can narrow it to
+          one clear topic before posting to the pool.
         </p>
         <div className="mt-4 space-y-4">
           {followUps.map((q) => (
@@ -437,14 +449,13 @@ function FaqVerdict({
 }) {
   return (
     <VerdictShell tone="clay">
-      <p className="uppercase-label flex items-center gap-1.5 text-brand-700">
+      <p className="uppercase-label flex items-center gap-1.5 text-amber-700">
         <Users className="h-4 w-4" />
-        Asked {analysis.askCount} times before
+        Common · asked {analysis.askCount} times before
       </p>
       <p className="mt-2 text-stone-700">
-        No need to bother a colleague — here&apos;s an{" "}
-        <span className="font-semibold">anonymized answer</span> published from past
-        sessions on &ldquo;{analysis.title}&rdquo;.
+        Others had the same question. Here&apos;s a short answer from past sessions
+        on &ldquo;{analysis.title}&rdquo; — try this before asking a person.
       </p>
       <div className="mt-4 space-y-2 rounded-2xl border border-paper-300 bg-white p-4">
         {analysis.pastConversation.map((m, i) => (
@@ -487,5 +498,43 @@ function FaqVerdict({
         <ResourceList resources={analysis.resources} />
       </div>
     </VerdictShell>
+  );
+}
+
+function SimpleVerdict({
+  analysis,
+  onSelfServed,
+}: {
+  analysis: Extract<QueryAnalysis, { kind: "simple" }>;
+  onSelfServed: () => void;
+}) {
+  return (
+    <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6">
+      <p className="uppercase-label flex items-center gap-1.5 text-emerald-700">
+        <Bot className="h-4 w-4" />
+        Simple · answered by AI
+      </p>
+      <p className="mt-2 font-serif text-lg text-stone-900">{analysis.title}</p>
+      <p className="mt-1 text-sm text-stone-600">
+        Basic SQL — no need to wake up an expert. Here is a direct answer:
+      </p>
+      <div className="mt-4 rounded-2xl border border-emerald-200/80 bg-white p-4 text-sm leading-relaxed text-stone-700">
+        {analysis.answer}
+      </div>
+      <div className="mt-4">
+        <ResourceList resources={analysis.resources} compact title="Learn more" />
+      </div>
+      <p className="mt-4 text-center text-xs text-stone-500">
+        Experts stay free for Specific and Common questions.
+      </p>
+      <button
+        type="button"
+        onClick={onSelfServed}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99]"
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        That solved it
+      </button>
+    </div>
   );
 }

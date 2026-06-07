@@ -4,10 +4,11 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "node scripts/clean-cache.mjs && next dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:no-open": "node scripts/dev.mjs --no-open",
     "clean": "node scripts/clean-cache.mjs",
-    "dev:clean": "npm run dev",
-    "build": "node scripts/clean-cache.mjs && next build",
+    "dev:clean": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "next lint"
   },

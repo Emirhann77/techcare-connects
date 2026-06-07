@@ -1,10 +1,14 @@
 "use client";
 
-import { ArrowRight, Check, CheckCircle2, Ticket } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, CalendarDays, Check, CheckCircle2, Ticket, X } from "lucide-react";
 import {
   displayHelperName,
+  meetingSpots,
   slotLabel,
   spotLabel,
+  timeSlots,
+  type MeetingProposal,
   type MyRequest,
 } from "@/lib/mockData";
 
@@ -12,13 +16,22 @@ interface TicketCreatedSuccessProps {
   request: MyRequest;
   onGoHome: () => void;
   onAcceptProposal: (request: MyRequest) => void;
+  onCounterProposal: (request: MyRequest, proposal: MeetingProposal) => void;
+  onDeclineProposal: (request: MyRequest) => void;
 }
 
 export default function TicketCreatedSuccess({
   request,
   onGoHome,
   onAcceptProposal,
+  onCounterProposal,
+  onDeclineProposal,
 }: TicketCreatedSuccessProps) {
+  const [showCounter, setShowCounter] = useState(false);
+  const [slotId, setSlotId] = useState(request.askerSlots[0] ?? timeSlots[0].id);
+  const [spot, setSpot] = useState<string>(meetingSpots[0].id);
+  const [note, setNote] = useState("");
+
   return (
     <section className="mx-auto max-w-lg animate-fade-in text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -63,15 +76,101 @@ export default function TicketCreatedSuccess({
       </div>
 
       {request.status === "Awaiting OK" ? (
-        <button
-          onClick={() => onAcceptProposal(request)}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.99]"
-        >
-          <Check className="h-4 w-4" />
-          Accept meeting
-        </button>
+        <div className="mt-6 space-y-2">
+          {!showCounter ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onAcceptProposal(request)}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 active:scale-[0.99]"
+              >
+                <Check className="h-4 w-4" />
+                Accept meeting
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCounter(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-brand-300 bg-white px-4 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Propose another date
+              </button>
+              <button
+                type="button"
+                onClick={() => onDeclineProposal(request)}
+                className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-stone-400 transition hover:text-red-600"
+              >
+                <X className="h-4 w-4" />
+                Decline
+              </button>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
+                Your preferred time
+              </p>
+              <div className="mt-2 space-y-1">
+                {timeSlots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSlotId(slot.id)}
+                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
+                      slotId === slot.id
+                        ? "border-brand-500 bg-white font-medium"
+                        : "border-transparent bg-white/70"
+                    }`}
+                  >
+                    {slot.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {meetingSpots.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSpot(m.id)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      spot === m.id
+                        ? "bg-stone-900 text-white"
+                        : "bg-white ring-1 ring-paper-300"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCounterProposal(request, {
+                      spot,
+                      slotId,
+                      note: note.trim() || undefined,
+                      from: "helpee",
+                    });
+                    setShowCounter(false);
+                  }}
+                  className="flex-1 rounded-full bg-brand-600 py-2 text-sm font-semibold text-white"
+                >
+                  Send new time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCounter(false)}
+                  className="rounded-full px-4 py-2 text-sm text-stone-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <button
+          type="button"
           onClick={onGoHome}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 active:scale-[0.99]"
         >
