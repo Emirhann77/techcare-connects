@@ -2,6 +2,7 @@
   "name": "techcare-connects",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "node scripts/clean-cache.mjs && next dev",
     "clean": "node scripts/clean-cache.mjs",
